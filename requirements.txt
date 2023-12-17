@@ -1,0 +1,4 @@
+six~=1.16.0
+behave~=1.2.6
+behave-html-formatter~=0.9.10
+selenium~=4.16.0
