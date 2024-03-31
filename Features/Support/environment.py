@@ -6,6 +6,10 @@ from Utilities.WebDriver import *
 from PageObjects.HomePage import HomePage
 
 
+def before_all(context):
+    pass
+
+
 def before_feature(context, feature):
     pass
 
@@ -33,4 +37,7 @@ def after_scenario(context, scenario):
 
 
 def after_feature(context, feature):
+    pass
+
+def after_all(context):
     pass
