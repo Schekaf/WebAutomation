@@ -27,17 +27,20 @@ A scalable, maintainable End-to-End (E2E) UI testing framework built with **Pyth
 ## 📁 Project Architecture
 
 ```text
-├── Elements/
+├── Elements/                  # UI element locators (XPaths, CSS selectors)
+│   └── home_page.ini          
 ├── Features/
+│   ├── Steps/                 # Step definitions (links Gherkin to Page Objects)
+│   │   └── Steps.py
 │   ├── environment.py         # Hooks (before/after scenario, screenshot capture)
-│   ├── steps/                 # Step definitions (links Gherkin to Page Objects)
-│   │   └── login_steps.py
-│   └── login.feature          # Gherkin feature files
-├── PageObjects/                     # Page Object Model classes (UI elements & interactions)
-│   ├── base_page.py           # Core wrapper around Selenium actions (clicks, waits, inputs)
-│   └── login_page.py          # Page-specific locators and actions
-├── PageObjects/   
-├── reports/                   # Execution reports and failure screenshots
-├── config.py                  # Environment configurations and driver setups
-├── requirements.txt           # Python dependencies
-└── README.md                  # Project documentation
+│   └── Search.feature         # Gherkin feature files
+├── PageObjects/               # Page Object Model classes (UI elements & interactions)
+│   ├── BasePage.py            # Core wrapper around Selenium actions (clicks, waits, inputs)
+│   └── HomePage.py            # Page-specific locators and actions
+├── Reports/                   # Execution reports and failure screenshots
+├── Utilities/
+│   ├── Common.py              # Common functions
+│   └── WebDriver.py           # WebDriver Functions (browser setup, teardown, waits)
+├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
+├── README.md                  # Project documentation
+└── requirements.txt           # Python dependencies
