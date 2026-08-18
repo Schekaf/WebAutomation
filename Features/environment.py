@@ -21,7 +21,7 @@ def before_scenario(context, scenario):
 
     context.common = Common(context.driver, ini_file_path=rf"{os.getcwd()}/Elements/homepage.ini")
 
-    context.kitap_yurdu_homepage = HomePage
+    context.homepage = HomePage(context.driver)
 
     context.driver.maximize_window()
 
