@@ -6,8 +6,8 @@ class HomePage:
         self.driver = driver
         self.common = Common(self.driver, './Elements/home_page.ini')
 
-    def open(self):
-        self.driver.get('https://www.kitapyurdu.com/')
+    def open(self, url):
+        return self.driver.get(url)
 
     def get_title(self):
         return self.driver.title
