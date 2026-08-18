@@ -4,7 +4,7 @@ from Utilities.Common import Common
 class HomePage:
     def __init__(self, driver):
         self.driver = driver
-        self.common = Common(self.driver, './Elements/home_page.ini')
+        self.common = Common(self.driver)
 
     def open(self, url):
         return self.driver.get(url)
