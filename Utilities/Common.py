@@ -1,15 +1,27 @@
+import glob
 import configparser
-from selenium.webdriver.remote.webelement import WebElement
+import os.path
+
+from selenium.webdriver.common.by import By
 
 
 class Common:
-    def __init__(self, driver, ini_file_path):
+    def __init__(self, driver):
         self.driver = driver
         self.config = configparser.ConfigParser()
-        self.config.read(ini_file_path)
+        elements_dir = os.path.join(os.getcwd(), "Elements")
+        ini_files = glob.glob(os.path.join(elements_dir, "*.ini"))
+        self.config.read(ini_files, encoding="utf-8")
 
-    def get_xpath(self,  element_name, section='locator') -> str:
-        return self.config.get(section, element_name)
+    def get_locator(self, key_name, section="locator"):
+        """Retrieves the XPath locator string from the .ini file."""
+        try:
+            return self.config.get(section, key_name.lower())
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            raise KeyError(f"Locator key '{key_name}' not found in section '[{section}]'") from e
 
-    def get_element(self, element_name) -> WebElement:
-        return self.driver.find_element_by_xpath(element_name)
+    def element_click(self, key_name):
+        """Example usage: clicks an element using locator key from .ini file."""
+        xpath_val = self.get_locator(key_name)
+        element = self.driver.find_element(By.XPATH, xpath_val)
+        element.click()
