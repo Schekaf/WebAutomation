@@ -31,9 +31,11 @@ A scalable, maintainable End-to-End (E2E) UI testing framework built with **Pyth
 │   └── home_page.ini          
 ├── Features/
 │   ├── Steps/                 # Step definitions (links Gherkin to Page Objects)
-│   │   └── Steps.py
+│   │   ├── ActionSteps.py   
+│   │   ├── BrowserSteps.py   
+│   │   └── ValidationSteps.py
 │   ├── environment.py         # Hooks (before/after scenario, screenshot capture)
-│   └── Search.feature         # Gherkin feature files
+│   └── WebInputs.feature      # Gherkin feature files
 ├── PageObjects/               # Page Object Model classes (UI elements & interactions)
 │   ├── BasePage.py            # Core wrapper around Selenium actions (clicks, waits, inputs)
 │   └── HomePage.py            # Page-specific locators and actions
