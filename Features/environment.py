@@ -19,7 +19,7 @@ def before_feature(context, feature):
 def before_scenario(context, scenario):
     context.driver = get_driver()
 
-    context.common = Common(context.driver, ini_file_path=rf"{os.getcwd()}/Elements/homepage.ini")
+    context.common = Common(context.driver)
 
     context.homepage = HomePage(context.driver)
 
