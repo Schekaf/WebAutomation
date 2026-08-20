@@ -36,7 +36,7 @@ def _process_single_val(val):
 
     # 1. Standard Date & Clipboard
     if "<TODAY>" in val:
-        val = val.replace("<TODAY>", datetime.today().strftime("%Y-%m-%d"))
+        val = val.replace("<TODAY>", datetime.today().strftime("%d/%m/%Y"))
 
     if "<PASTE>" in val:
         val = val.replace("<PASTE>", _get_clipboard_text())
