@@ -3,7 +3,8 @@ import configparser
 import os.path
 
 from selenium.webdriver.common.by import By
-
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class Common:
     def __init__(self, driver):
@@ -24,6 +25,12 @@ class Common:
         """Example usage: retrieves a web element using locator key from .ini file."""
         xpath_val = self.get_locator(field_name)
         return self.driver.find_element(By.XPATH, xpath_val)
+
+    def get_redirected_url(self, expected_path, timeout=10):
+        return WebDriverWait(self.driver, timeout).until(
+            EC.url_contains(expected_path),
+            message=f"Timed out waiting for URL to contain '{expected_path}'. Current URL: '{self.driver.current_url}'"
+        )
 
     def element_click(self, key_name):
         """Example usage: clicks an element using locator key from .ini file."""
