@@ -30,14 +30,14 @@ The framework automatically intercepts step arguments at runtime and transforms 
 
 ### Supported Keywords
 
-| Keyword | Description | Example Input | Example Output |
-| :--- | :--- | :--- | :--- |
-| `<TODAY>` | Replaces with current date (`YYYY-MM-DD`) | `Date: <TODAY>` | `Date: 2026-08-20` |
-| `<PASTE>` | Replaces with OS clipboard contents | `<PASTE>` | `Clipboard text` |
-| `<RANDOM>` | Generates a random 4-digit number and caches it | `User_<RANDOM>` | `User_4819` |
-| `<GETRANDOM>` | Retrieves the last generated `<RANDOM>` number | `Confirm <GETRANDOM>` | `Confirm 4819` |
-| `<RANDOM:key>` | Generates a random 4-digit number and caches it under `key` | `<RANDOM:user_id>` | `3921` |
-| `<GET:key>` | Retrieves the cached number stored under `key` | `<GET:user_id>` | `3921` |
+| Keyword | Description                                                 | Example Input | Example Output     |
+| :--- |:------------------------------------------------------------| :--- |:-------------------|
+| `<TODAY>` | Replaces with current date (`DD/MM/YYYY`)                   | `Date: <TODAY>` | `Date: 20/08/2026` |
+| `<PASTE>` | Replaces with OS clipboard contents                         | `<PASTE>` | `Clipboard text`   |
+| `<RANDOM>` | Generates a random 4-digit number and caches it             | `User_<RANDOM>` | `User_4819`        |
+| `<GETRANDOM>` | Retrieves the last generated `<RANDOM>` number              | `Confirm <GETRANDOM>` | `Confirm 4819`     |
+| `<RANDOM:key>` | Generates a random 4-digit number and caches it under `key` | `<RANDOM:user_id>` | `3921`             |
+| `<GET:key>` | Retrieves the cached number stored under `key`              | `<GET:user_id>` | `3921`             |
 
 ### Gherkin Examples
 
