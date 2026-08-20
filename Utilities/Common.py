@@ -20,8 +20,20 @@ class Common:
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             raise KeyError(f"Locator key '{key_name}' not found in section '[{section}]'") from e
 
+    def get_element(self, field_name):
+        """Example usage: retrieves a web element using locator key from .ini file."""
+        xpath_val = self.get_locator(field_name)
+        return self.driver.find_element(By.XPATH, xpath_val)
+
     def element_click(self, key_name):
         """Example usage: clicks an element using locator key from .ini file."""
         xpath_val = self.get_locator(key_name)
         element = self.driver.find_element(By.XPATH, xpath_val)
-        element.click()
+        return element.click()
+
+    def enter_text(self, key_name, text):
+        """Example usage: enters text into an input field using locator key from .ini file."""
+        xpath_val = self.get_locator(key_name)
+        element = self.driver.find_element(By.XPATH, xpath_val)
+        element.clear()
+        return element.send_keys(text)
