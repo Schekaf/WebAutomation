@@ -24,7 +24,34 @@ A scalable, maintainable End-to-End (E2E) UI testing framework built with **Pyth
 
 ---
 
-## 📁 Project Architecture
+## ⚡ Dynamic Step Parameters
+
+The framework automatically intercepts step arguments at runtime and transforms special keyword placeholders before executing the step logic.
+
+### Supported Keywords
+
+| Keyword | Description | Example Input | Example Output |
+| :--- | :--- | :--- | :--- |
+| `<TODAY>` | Replaces with current date (`YYYY-MM-DD`) | `Date: <TODAY>` | `Date: 2026-08-20` |
+| `<PASTE>` | Replaces with OS clipboard contents | `<PASTE>` | `Clipboard text` |
+| `<RANDOM>` | Generates a random 4-digit number and caches it | `User_<RANDOM>` | `User_4819` |
+| `<GETRANDOM>` | Retrieves the last generated `<RANDOM>` number | `Confirm <GETRANDOM>` | `Confirm 4819` |
+| `<RANDOM:key>` | Generates a random 4-digit number and caches it under `key` | `<RANDOM:user_id>` | `3921` |
+| `<GET:key>` | Retrieves the cached number stored under `key` | `<GET:user_id>` | `3921` |
+
+### Gherkin Examples
+
+```gherkin
+Scenario: Dynamic parameter usage in feature files
+  When I enter "<TODAY>" into "Registration Date" field
+  And I enter "<PASTE>" into "Notes" field
+  And I enter "<RANDOM:user_id>" into "User ID" field
+  And I enter "<RANDOM:order_id>" into "Order ID" field
+  Then I verify user "<GET:user_id>" created order "<GET:order_id>"
+  And I verify the last generated ID matches "<GETRANDOM>"
+```
+
+### 📁 Project Architecture
 
 ```text
 ├── Elements/                  # UI element locators (XPaths, CSS selectors)
@@ -46,3 +73,6 @@ A scalable, maintainable End-to-End (E2E) UI testing framework built with **Pyth
 ├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
 ├── README.md                  # Project documentation
 └── requirements.txt           # Python dependencies
+
+
+
