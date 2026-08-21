@@ -21,3 +21,12 @@ Feature: Web Automation with Behave
     And I enter "SuperSecretPassword!" into Password field
     And I click on Login button
     And I should be redirected to the "/secure" page
+
+  @LoginFailure
+  Scenario: Invalid Password Login
+    Given I open "https://practice.expandtesting.com/"
+    And I click on Test Login Page Try it out button
+    When I enter "practice" into Username field
+    And I enter "123456" into Password field
+    And I click on Login button
+    Then I see "Your password is invalid!" as Login Error Message field value
