@@ -36,41 +36,47 @@ def _string_substitute(val):
     if val is None or not isinstance(val, str):
         return val
 
-    # 1. Standard Date & Clipboard
+    # 0. Skip Signal
+    if "<SKIP>" in val:
+        return None  # Returning None signals to the step execution to skip this step
+
+    # 1. Empty String Placeholders
+    if "<EMPTY>" in val:
+        val = val.replace("<EMPTY>", "")
+
+    if "<NOTHING>" in val:
+        val = val.replace("<NOTHING>", "")
+
+    # 2. Standard Date & Clipboard
     if "<TODAY>" in val:
         val = val.replace("<TODAY>", datetime.today().strftime("%d/%m/%Y"))
 
     if "<PASTE>" in val:
         val = val.replace("<PASTE>", _get_clipboard_text())
 
-    # 2. Variable Length Random String / Plain Random String (<RANDOM> or <RANDOM:8>)
-    # Checks for digits after the colon (e.g., <RANDOM:8>) vs plain <RANDOM>
+    # 3. Variable Length Random String / Plain Random String (<RANDOM> or <RANDOM:8>)
     random_len_match = re.search(r"<RANDOM(?::(\d+))?>", val)
     if random_len_match:
         length = (
-            int(random_len_match.group(1))
-            if random_len_match.group(1)
-            else 6
+            int(random_len_match.group(1)) if random_len_match.group(1) else 6
         )
         rand_str = "".join(random.choices(string.ascii_letters, k=length))
         _VARIABLE_CACHE["last_random"] = rand_str  # Cache for <GETRANDOM>
 
-        # Replace only the specific matched tag (<RANDOM> or <RANDOM:8>)
         tag_to_replace = random_len_match.group(0)
         val = val.replace(tag_to_replace, rand_str, 1)
 
-    # 3. Retrieve Last Random String (<GETRANDOM>)
+    # 4. Retrieve Last Random String (<GETRANDOM>)
     if "<GETRANDOM>" in val:
         last_rand = _VARIABLE_CACHE.get("last_random", "")
         val = val.replace("<GETRANDOM>", last_rand)
 
-    # 4. Named Caching: <RANDOM:key_name> (where key_name is non-numeric, e.g., <RANDOM:user_id>)
+    # 5. Named Caching: <RANDOM:key_name> (where key_name is non-numeric, e.g., <RANDOM:user_id>)
     if "<RANDOM:" in val and ">" in val:
         start = val.find("<RANDOM:") + len("<RANDOM:")
         end = val.find(">", start)
         key_name = val[start:end]
 
-        # Only process if key_name is NOT a pure digit (to avoid clashing with <RANDOM:8>)
         if not key_name.isdigit():
             rand_num = str(random.randint(1000, 9999))
             _VARIABLE_CACHE[key_name] = rand_num
@@ -85,6 +91,7 @@ def _string_substitute(val):
 
     return val
 
+
 # --- 2. Decorator Functionalities ---
 
 def transform_param():
@@ -95,6 +102,8 @@ def transform_param():
         def wrapper(*args, **kwargs):
             transformed_args = [_string_substitute(arg) for arg in args]
             transformed_kwargs = {k: _string_substitute(v) for k, v in kwargs.items()}
+            if any(arg is None for arg in transformed_args) or any(v is None for v in transformed_kwargs.values()):
+                return None
             return func(*transformed_args, **transformed_kwargs)
 
         return wrapper
