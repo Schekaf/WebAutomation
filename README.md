@@ -68,14 +68,14 @@ Scenario: Dynamic parameter usage in feature files
 │   │   ├── BrowserSteps.py   
 │   │   └── ValidationSteps.py
 │   ├── environment.py         # Hooks (before/after scenario, screenshot capture)
-│   └── WebInputs.feature      # Gherkin feature files
+│   └── PracticeTests.feature  # Gherkin feature files
 ├── PageObjects/               # Page Object Model classes (UI elements & interactions)
 │   ├── BasePage.py            # Core wrapper around Selenium actions (clicks, waits, inputs)
 │   └── HomePage.py            # Page-specific locators and actions
 ├── Reports/                   # Execution reports and failure screenshots
 ├── Utilities/
 │   ├── Common.py              # Common functions
-│   └── PracticeTests.py           # WebDriver Functions (browser setup, teardown, waits)
+│   └── WebDriver.py           # WebDriver Functions (browser setup, teardown, waits)
 ├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
 ├── README.md                  # Project documentation
 └── requirements.txt           # Python dependencies
