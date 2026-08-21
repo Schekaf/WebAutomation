@@ -75,6 +75,8 @@ Scenario: Dynamic parameter usage in feature files
 ├── Reports/                   # Execution reports and failure screenshots
 ├── Utilities/
 │   ├── Common.py              # Common functions
+│   ├── ElementHelper.py       # Element interaction helpers (click, input, wait)
+│   ├── StepHelper.py          # Step execution helpers (dynamic parameter handling, logging)
 │   └── WebDriver.py           # WebDriver Functions (browser setup, teardown, waits)
 ├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
 ├── README.md                  # Project documentation
