@@ -31,9 +31,6 @@ def _get_clipboard_text():
 
 def _process_single_val(val):
     """Processes dynamic keyword placeholders and manages state caching."""
-    if not isinstance(val, str):
-        return val
-
     # 1. Standard Date & Clipboard
     if "<TODAY>" in val:
         val = val.replace("<TODAY>", datetime.today().strftime("%d/%m/%Y"))
@@ -41,25 +38,38 @@ def _process_single_val(val):
     if "<PASTE>" in val:
         val = val.replace("<PASTE>", _get_clipboard_text())
 
-    # 2. Generate Random Number (<RANDOM>)
-    if "<RANDOM>" in val:
-        rand_num = str(random.randint(1000, 9999))
-        _VARIABLE_CACHE["last_random"] = rand_num  # Cache for <GETRANDOM>
-        val = val.replace("<RANDOM>", rand_num)
+    # 2. Variable Length Random String / Plain Random String (<RANDOM> or <RANDOM:8>)
+    # Checks for digits after the colon (e.g., <RANDOM:8>) vs plain <RANDOM>
+    random_len_match = re.search(r"<RANDOM(?::(\d+))?>", val)
+    if random_len_match:
+        length = (
+            int(random_len_match.group(1))
+            if random_len_match.group(1)
+            else 6
+        )
+        rand_str = "".join(random.choices(string.ascii_letters, k=length))
+        _VARIABLE_CACHE["last_random"] = rand_str  # Cache for <GETRANDOM>
 
-    # 3. Retrieve Last Random Number (<GETRANDOM>)
+        # Replace only the specific matched tag (<RANDOM> or <RANDOM:8>)
+        tag_to_replace = random_len_match.group(0)
+        val = val.replace(tag_to_replace, rand_str, 1)
+
+    # 3. Retrieve Last Random String (<GETRANDOM>)
     if "<GETRANDOM>" in val:
         last_rand = _VARIABLE_CACHE.get("last_random", "")
         val = val.replace("<GETRANDOM>", last_rand)
 
-    # 4. Named Caching: <RANDOM:key_name> and <GET:key_name>
+    # 4. Named Caching: <RANDOM:key_name> (where key_name is non-numeric, e.g., <RANDOM:user_id>)
     if "<RANDOM:" in val and ">" in val:
         start = val.find("<RANDOM:") + len("<RANDOM:")
         end = val.find(">", start)
         key_name = val[start:end]
-        rand_num = str(random.randint(1000, 9999))
-        _VARIABLE_CACHE[key_name] = rand_num
-        val = val.replace(f"<RANDOM:{key_name}>", rand_num)
+
+        # Only process if key_name is NOT a pure digit (to avoid clashing with <RANDOM:8>)
+        if not key_name.isdigit():
+            rand_num = str(random.randint(1000, 9999))
+            _VARIABLE_CACHE[key_name] = rand_num
+            val = val.replace(f"<RANDOM:{key_name}>", rand_num)
 
     if "<GET:" in val and ">" in val:
         start = val.find("<GET:") + len("<GET:")
@@ -69,7 +79,6 @@ def _process_single_val(val):
         val = val.replace(f"<GET:{key_name}>", cached_val)
 
     return val
-
 
 # --- 2. Decorator Functionalities ---
 
