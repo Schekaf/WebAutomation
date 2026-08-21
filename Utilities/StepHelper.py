@@ -1,5 +1,7 @@
 import functools
 import random
+import re
+import string
 import tkinter as tk
 from datetime import datetime
 from behave import (
@@ -29,8 +31,11 @@ def _get_clipboard_text():
         return ""
 
 
-def _process_single_val(val):
+def _string_substitute(val):
     """Processes dynamic keyword placeholders and manages state caching."""
+    if val is None or not isinstance(val, str):
+        return val
+
     # 1. Standard Date & Clipboard
     if "<TODAY>" in val:
         val = val.replace("<TODAY>", datetime.today().strftime("%d/%m/%Y"))
@@ -88,8 +93,8 @@ def transform_param():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            transformed_args = [_process_single_val(arg) for arg in args]
-            transformed_kwargs = {k: _process_single_val(v) for k, v in kwargs.items()}
+            transformed_args = [_string_substitute(arg) for arg in args]
+            transformed_kwargs = {k: _string_substitute(v) for k, v in kwargs.items()}
             return func(*transformed_args, **transformed_kwargs)
 
         return wrapper
