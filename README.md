@@ -51,7 +51,7 @@ Scenario: Dynamic parameter usage in feature files
   And I verify user "<GET:user_id>" was successfully created --> (retrieves generated <RANDOM:user_id>)
 ```
 
-### 📁 Project Architecture
+## 📁 Project Architecture
 
 ```text
 ├── Elements/                  # UI element locators (XPaths, CSS selectors)
@@ -69,10 +69,33 @@ Scenario: Dynamic parameter usage in feature files
 ├── Reports/                   # Execution reports and failure screenshots
 ├── Utilities/
 │   ├── Common.py              # Common functions
-│   └── WebDriver.py           # WebDriver Functions (browser setup, teardown, waits)
+│   └── PracticeTests.py           # WebDriver Functions (browser setup, teardown, waits)
 ├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
 ├── README.md                  # Project documentation
 └── requirements.txt           # Python dependencies
+```
 
+## 🚀 Test Execution Guide
 
+Tests are executed using **Behave** (BDD framework). You can customize runs using tags, browser selection, and CLI flags.
 
+### 1. Basic Execution Commands
+
+Run all feature files in default browser (Chrome):
+```bash
+behave
+```
+Run a specific feature file:
+```bash
+behave Features/PracticeTests.feature
+```
+### 2. Running by Tags
+Run tests tagged with @Register:
+```bash
+behave Features/PracticeTests.feature -t Register
+```
+### 3. Cross-Browser Testing
+You can specify the target browser dynamically via the `-D browser` flag. Supported browsers: `chrome`, `firefox`, `edge`.
+```bash
+behave Features/PracticeTests.feature -t Register -k -D browser=chrome
+```
