@@ -18,7 +18,9 @@ def before_feature(context, feature):
 
 
 def before_scenario(context, scenario):
-    context.driver = get_driver()
+    # Reads '-D browser=...' from terminal input; defaults to 'chrome' if omitted
+    browser = context.config.userdata.get("browser", "chrome")
+    context.driver = get_driver(browser)
 
     context.common = Common(context.driver)
     context.elementHelper = ElementHelper(context.driver)
