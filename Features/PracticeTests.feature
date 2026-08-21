@@ -39,3 +39,13 @@ Feature: Web Automation with Behave
     And I enter "SuperSecretPassword!" into Password field
     And I click on Login button
     Then I see "Invalid username." as Login Error Message field value
+
+  @Register
+  Scenario: Successful Register
+    Given I open "https://practice.expandtesting.com/"
+    And I click on Test Register Page Try it out button
+    When I enter "<RANDOM:8>" into Username field
+    And I enter "Password1234!" into Password field
+    And I enter "Password1234!" into Confirm Password field
+    And I click on Register button
+    Then I see "Successfully registered, you can log in now." as Register Message field value
