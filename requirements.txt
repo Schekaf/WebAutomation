@@ -2,3 +2,7 @@ six~=1.16.0
 behave~=1.2.6
 configparser~=6.0.0
 selenium~=4.7.2
+langchain-ollama>=0.1.0,<1.0.0
+pydantic>=2.7.0,<3.0.0
+openai>=1.30.0,<2.0.0
+python-dotenv
