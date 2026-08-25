@@ -60,27 +60,52 @@ Scenario: Dynamic parameter usage in feature files
 ## 📁 Project Architecture
 
 ```text
-├── Elements/                  # UI element locators (XPaths, CSS selectors)
-│   └── home_page.ini          
-├── Features/
-│   ├── Steps/                 # Step definitions (links Gherkin to Page Objects)
-│   │   ├── ActionSteps.py   
-│   │   ├── BrowserSteps.py   
-│   │   └── ValidationSteps.py
-│   ├── environment.py         # Hooks (before/after scenario, screenshot capture)
-│   └── PracticeTests.feature  # Gherkin feature files
-├── PageObjects/               # Page Object Model classes (UI elements & interactions)
-│   ├── BasePage.py            # Core wrapper around Selenium actions (clicks, waits, inputs)
-│   └── HomePage.py            # Page-specific locators and actions
-├── Reports/                   # Execution reports and failure screenshots
-├── Utilities/
-│   ├── Common.py              # Common functions
-│   ├── ElementHelper.py       # Element interaction helpers (click, input, wait)
-│   ├── StepHelper.py          # Step execution helpers (dynamic parameter handling, logging)
-│   └── WebDriver.py           # WebDriver Functions (browser setup, teardown, waits)
-├── behave.ini                 # Behave configuration file (tags, formatters, etc.)
-├── README.md                  # Project documentation
-└── requirements.txt           # Python dependencies
+WebAutomation/
+├── ai_agents/                            # AI agent pipeline (generators & prompts)
+│   ├── core/                             # Shared agent data layer
+│   │   ├── __init__.py
+│   │   ├── schemas.py                    # Shared Pydantic schemas
+│   │   └── tradehub_domain.py            # TradeHub domain entities & prompt contexts
+│   ├── qa_test_generator_agent/          # Agent 1: Gherkin -> Feature Files
+│   │   ├── __init__.py
+│   │   └── test_generator.py
+│   └── qa_test_step_generator_agent/     # Agent 2: Gherkin -> Behave Step Definitions
+│       ├── __init__.py
+│       └── test_step_generator.py        # 🛠️ Upcoming!
+│
+├── elements/                             # Locators (if using external ini/json configs)
+│   ├── home_page.ini
+│   └── tradehub_home.ini
+│
+├── features/                             # Behave BDD Layer
+│   ├── steps/                            # Step definitions (links Gherkin to PageObjects)
+│   │   ├── action_steps.py
+│   │   ├── browser_steps.py
+│   │   └── validation_steps.py
+│   ├── environment.py                    # Behave hooks (driver init, failure screenshots)
+│   └── tradehub_smoke_tests.feature
+│
+├── page_objects/                         # Page Object Model Layer
+│   ├── __init__.py
+│   ├── base_page.py                      # Core driver wrappers (click, fill, wait)
+│   └── home_page.py                      # Page-specific actions & locators
+│
+├── reports/                              # Test execution outputs & failure artifacts
+│
+├── utilities/                            # Framework core utilities
+│   ├── __init__.py
+│   ├── common.py                         # General helper methods
+│   ├── element_helper.py                 # Advanced element handling
+│   ├── step_helper.py                    # Step logging / dynamic params
+│   └── web_driver.py                     # Driver setup (via webdriver-manager)
+│
+├── .env                                  # Local environment variables
+├── .gitignore                            # Excludes venv, reports, .env, drivers
+├── behave.ini                            # Behave execution settings
+├── generate_features.py                  # Entry point CLI script for Agent 1
+├── generate_steps.py                     # Entry point CLI script for Agent 2
+├── README.md                             # Project documentation
+└── requirements.txt                      # Dependencies
 ```
 
 ## 🚀 Test Execution Guide
@@ -95,15 +120,15 @@ behave
 ```
 Run a specific feature file:
 ```bash
-behave Features/PracticeTests.feature
+behave features/practice_tests.feature
 ```
 ### 2. Running by Tags
 Run tests tagged with @Register:
 ```bash
-behave Features/PracticeTests.feature -t Register
+behave features/practice_tests.feature -t Register
 ```
 ### 3. Cross-Browser Testing
 You can specify the target browser dynamically via the `-D browser` flag. Supported browsers: `chrome`, `firefox`, `edge`.
 ```bash
-behave Features/PracticeTests.feature -t Register -k -D browser=chrome
+behave features/practice_tests.feature -t Register -k -D browser=chrome
 ```
