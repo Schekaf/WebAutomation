@@ -2,11 +2,11 @@ import os
 
 import behave
 
-from Utilities.Common import Common
-from Utilities.ElementHelper import ElementHelper
-from Utilities.WebDriver import *
+from utilities.common import Common
+from utilities.element_helper import ElementHelper
+from utilities.web_driver import *
 
-from PageObjects.HomePage import HomePage
+from page_objects.home_page import HomePage
 
 
 def before_all(context):

@@ -10,7 +10,7 @@ class Common:
     def __init__(self, driver):
         self.driver = driver
         self.config = configparser.ConfigParser()
-        elements_dir = os.path.join(os.getcwd(), "Elements")
+        elements_dir = os.path.join(os.getcwd(), "elements")
         ini_files = glob.glob(os.path.join(elements_dir, "*.ini"))
         self.config.read(ini_files, encoding="utf-8")
 

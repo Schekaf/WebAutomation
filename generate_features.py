@@ -1,6 +1,6 @@
 import os
 import re
-from AI_Agent.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS
+from ai_agents.core.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser

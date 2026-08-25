@@ -1,4 +1,4 @@
-from Utilities.Common import Common
+from utilities.common import Common
 
 
 class HomePage:

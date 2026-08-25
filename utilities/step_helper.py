@@ -111,7 +111,7 @@ def transform_param():
     return decorator
 
 
-# --- 3. Core Step Wrapper ---
+# --- 3. core Step Wrapper ---
 
 def _create_step_wrapper(behave_decorator, step_text):
     """Wraps step implementations with stacked decorator functionality."""

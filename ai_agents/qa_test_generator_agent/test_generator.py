@@ -3,8 +3,8 @@ from langchain_ollama import ChatOllama
 from openai import OpenAI
 from pydantic import BaseModel
 
-from .schemas import FeatureSuite
-from .tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE
+from ai_agents.core.schemas import FeatureSuite
+from ai_agents.core.tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE
 from dotenv import load_dotenv
 
 load_dotenv()

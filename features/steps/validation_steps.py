@@ -1,4 +1,4 @@
-from Utilities.StepHelper import step
+from utilities.step_helper import step
 
 
 @step('I see "{text}" as {field_name} field value')

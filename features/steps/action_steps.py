@@ -1,4 +1,4 @@
-from Utilities.StepHelper import step
+from utilities.step_helper import step
 
 
 @step('I click on {button_name} button')
