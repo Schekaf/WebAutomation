@@ -9,6 +9,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+STEP_PATTERNS_LIBRARY = """
+STRICT STEP PATTERNS:
+ActionSteps:
+- I click on {{element}}
+- I drag {{source} to {{destination}} and drop
+- I right click on {{element}}
+- I select "{{value}" as {{element}}
+- I deselect "{{value}" as {{element}}
+- I enter "{{value}" in {{element}}
+- I paste "{{value}" in {{element}}
+
+BrowserSteps:
+- I open "{{url}"
+- I click the Go Back Button
+- I press on {{key}} Key
+
+ValidationSteps:
+- I see {{element}} is {{option}}
+- I see "{{values}}" is selected as {{element}}
+- I see "{{values}}" in {{element}} Values
+- I do not see {{element}}
+"""
 
 class OllamaAgentService:
     def __init__(self):
@@ -28,6 +50,10 @@ STRICT SYNTAX & FORMAL FEW-SHOT EXAMPLES:
   - When I enter "[Value]" into [Field Name] field
   - Then I see "[Expected Value]" as [Field Name] field value
   - And I should be redirected to the "[/path]" page
+  
+  STEP PATTERNS:
+{STEP_PATTERNS_LIBRARY}
+
 
 DYNAMIC TOKENS:
 - "<RANDOM:8>" for randomized string inputs
