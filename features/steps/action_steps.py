@@ -1,9 +1,9 @@
 from utilities.step_helper import step
 
 
-@step('I click on {button_name} button')
-def step_impl(context, button_name):
-    assert context.common.element_click(button_name) is None, f'Failed to click on button: {button_name}'
+@step('I click on {element} button')
+def step_impl(context, element):
+    assert context.common.element_click(element) is None, f'Failed to click on button: {element}'
 
 
 @step('I enter "{text}" into {field_name} field')
