@@ -1,71 +1,63 @@
 import os
-from langchain_ollama import ChatOllama
 from openai import OpenAI
+from dotenv import load_dotenv
+from langchain_ollama import ChatOllama
 from pydantic import BaseModel
 
 from ai_agents.core.schemas import FeatureSuite
 from ai_agents.core.tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE
-from dotenv import load_dotenv
+from ai_agents.core.step_library import STEP_PATTERNS_LIBRARY, get_escaped_step_patterns
 
 load_dotenv()
 
-STEP_PATTERNS_LIBRARY = """
-STRICT STEP PATTERNS:
-ActionSteps:
-- I click on {{element}}
-- I drag {{source} to {{destination}} and drop
-- I right click on {{element}}
-- I select "{{value}" as {{element}}
-- I deselect "{{value}" as {{element}}
-- I enter "{{value}" in {{element}}
-- I paste "{{value}" in {{element}}
-
-BrowserSteps:
-- I open "{{url}"
-- I click the Go Back Button
-- I press on {{key}} Key
-
-ValidationSteps:
-- I see {{element}} is {{option}}
-- I see "{{values}}" is selected as {{element}}
-- I see "{{values}}" in {{element}} Values
-- I do not see {{element}}
-"""
 
 class OllamaAgentService:
     def __init__(self):
-        # Local free model (e.g. llama3 or llama3.2:3b)
-        self.llm = ChatOllama(model="llama3.2:3b", temperature=0.0)
+        # 1. format="json" forces local GBNF grammar sampler
+        # 2. low temperature (0.1) enforces strict rule-following
+        self.llm = ChatOllama(model="llama3.2:3b", temperature=0.1, format="json")
         self.structured_llm = self.llm.with_structured_output(FeatureSuite)
 
     def generate_tests_for_instructions(self, test_instructions: str) -> dict | BaseModel:
-        system_prompt = f"""
-You are an expert Senior QA Engineer. Analyze the TradeHub User Instructions and generate BDD Gherkin test scenarios.
+        system_prompt = f"""You are an expert Senior QA Engineer. Analyze the TradeHub User Instructions and generate BDD Gherkin test scenarios.
 
-STRICT SYNTAX & FORMAL FEW-SHOT EXAMPLES:
-- Scenario tags: @CamelCase (e.g., @LoginSuccess, @Register)
-- Sentence patterns:
-  - Given I open "https://www.tradehub.com.au/..."
-  - And I click on [Element Name] button
-  - When I enter "[Value]" into [Field Name] field
-  - Then I see "[Expected Value]" as [Field Name] field value
-  - And I should be redirected to the "[/path]" page
-  
-  STEP PATTERNS:
+CRITICAL SYNTAX RULES:
+1. Scenario tags MUST use @CamelCase (e.g., @LoginSuccess, @RegisterAccount).
+2. EVERY step in EVERY scenario MUST be an EXACT literal instance from the STEP PATTERNS library below.
+3. Replace all placeholders inside double quotes with real literal data or UI elements.
+4. NEVER write generic descriptive text.
+
+FEW-SHOT SYNTAX EXAMPLES:
+  ALLOWED:
+  - Given I open "https://www.tradehub.com.au/register"
+  - When I click on Create Account
+  - And I select "Trade Business" as Account Type
+  - And I enter "Furkan" as Name
+  - Then I see Success Message is Visible
+
+  DISALLOWED (DO NOT WRITE STEPS LIKE THIS):
+  - When I enter my name in the "Name" field
+  - Then I should see a success message
+  - And I select option to register
+
+STEP PATTERNS:
 {STEP_PATTERNS_LIBRARY}
 
-
 DYNAMIC TOKENS:
-- "<RANDOM:8>" for randomized string inputs
-- "<TODAY>" for dynamic date inputs
+- Use "<RANDOM:8>" for randomized string inputs.
+- Use "<TODAY>" for dynamic date inputs.
 
 DOMAIN KNOWLEDGE:
 {TRADEHUB_BUSINESS_KNOWLEDGE}
 
 Target Requirements:
 {test_instructions}
+
+CRITICAL RULES FOR GENERATION:
+1. Cover ALL 20 sections of the smoke test requirements (Account Creation, ABN restrictions, Job Lifecycle, Tenders, Mobile UX, Negative/Break-it scenarios).
+2. Ensure specific step definitions for Free vs. Premium tier boundaries and ABN workflow triggers.
+3. Every test case must rigidly adhere to the response schema.
 """
-        # Execute using Ollama locally
         return self.structured_llm.invoke(system_prompt)
 
 
