@@ -125,8 +125,10 @@ WebAutomation/
 |                                                                                                       |
 |   +-------------------------------------------------------------------------------------------+       |
 |   |                                     ai_agents/core/                                       |       |
-|   |  • model_selector.py (CLI Interactive Model Picker)                                       |       |
-|   |  • utils.py          (Gherkin Sanitizer, Regex Pattern Matcher, Section Splitter)         |       |
+|   |  • model_selector.py   (CLI Interactive Model Picker)                                     |       |
+|   |  • schemas.py          (Pydantic Data Schemas for Structured LLM Outputs)                 |       |
+|   |  • tradehub_domain.py  (TradeHub Application Domain Context & Entity Prompts)             |       |
+|   |  • utils.py            (Gherkin Sanitizer, Regex Pattern Matcher, Section Splitter)       |       |
 |   +----------------------------------------------+--------------------------------------------+       |
 |                                                  |                                                    |
 |                   +------------------------------+------------------------------+                     |
