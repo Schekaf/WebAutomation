@@ -44,36 +44,35 @@ Scenario: Open several profiles
   When I click on "Directory"
   And I click on "Profile 1"
   And I click on "Profile 2"
-  Then I see "Profile 1" is "open"
-  And I see "Profile 2" is "open"
+  Then I see "Profile 1" and "Profile 2" are "open"
 
 @PositiveTesting
 Scenario: Check rates
   Given I open "https://tradehub.com.au"
   When I click on "Directory"
   And I click on "Profile 1"
-  Then I see "Rates" is "available"
+  Then I see "Rates" in "Profile 1"
 
 @PositiveTesting
 Scenario: Check reviews
   Given I open "https://tradehub.com.au"
   When I click on "Directory"
   And I click on "Profile 1"
-  Then I see "Reviews" is "available"
+  Then I see "Reviews" in "Profile 1"
 
 @PositiveTesting
 Scenario: Check available dates
   Given I open "https://tradehub.com.au"
   When I click on "Directory"
   And I click on "Profile 1"
-  Then I see "Available Dates" is "available"
+  Then I see "Available Dates" in "Profile 1"
 
 @PositiveTesting
 Scenario: Check profile descriptions
   Given I open "https://tradehub.com.au"
   When I click on "Directory"
   And I click on "Profile 1"
-  Then I see "Profile Description" is "available"
+  Then I see "Profile Description" in "Profile 1"
 
 @PositiveTesting
 Scenario: Contact/message a business
@@ -81,7 +80,7 @@ Scenario: Contact/message a business
   When I click on "Directory"
   And I click on "Profile 1"
   And I click on "Contact"
-  Then I see "Contact Form" is "open"
+  Then I see "Contact Form" in "Profile 1"
 
 @PositiveTesting
 Scenario: Confirm that the results make sense based on the filters selected
@@ -101,6 +100,7 @@ Scenario: Confirm that the results make sense based on the filters selected
 Scenario: Check Free account radius restrictions if applicable
   Given I open "https://tradehub.com.au"
   When I click on "Directory"
-  And I select "100 km" as "Distance"
+  And I select "Free Account" as "Account Type"
+  And I select "10 km" as "Distance"
   And I click on "Search"
   Then I see "Distance" is "5 km"

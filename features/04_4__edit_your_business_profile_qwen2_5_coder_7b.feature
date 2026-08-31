@@ -20,7 +20,7 @@ Scenario: Add or edit your business description
   And I click on "Edit Profile"
   And I enter "Updated business description" in "Business Description"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Add your business phone number
@@ -29,16 +29,16 @@ Scenario: Add your business phone number
   And I click on "Edit Profile"
   And I enter "1234567890" in "Business Phone Number"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Add your website if available
   Given I open "https://tradehub.com.au"
   When I click on "My Profile"
   And I click on "Edit Profile"
-  And I enter "https://example.com" in "Business Website"
+  And I enter "https://www.example.com" in "Business Website"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Add your service/location information
@@ -47,25 +47,26 @@ Scenario: Add your service/location information
   And I click on "Edit Profile"
   And I enter "Location information" in "Service/Location Information"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Add your hourly or day rate if available
   Given I open "https://tradehub.com.au"
   When I click on "My Profile"
   And I click on "Edit Profile"
-  And I enter "100" in "Hourly Rate"
+  And I enter "100" in "Hourly/Day Rate"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Upload/change your profile image or logo
   Given I open "https://tradehub.com.au"
   When I click on "My Profile"
   And I click on "Edit Profile"
-  And I drag "profile_image.jpg" to "Profile Image" and drop
+  And I click on "Change Profile Image"
+  And I select "new-image.jpg" as "Profile Image"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Edit any other available business information
@@ -74,7 +75,7 @@ Scenario: Edit any other available business information
   And I click on "Edit Profile"
   And I enter "Updated information" in "Other Business Information"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Save the profile
@@ -83,7 +84,7 @@ Scenario: Save the profile
   And I click on "Edit Profile"
   And I enter "Updated information" in "Other Business Information"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Refresh the page
@@ -141,7 +142,7 @@ Scenario: Change the profile between Public and Private
   And I click on "Change Visibility"
   And I select "Private" as "Visibility"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message
 
 @SmokeTest
 Scenario: Confirm the visibility setting behaves correctly
@@ -171,4 +172,4 @@ Scenario: Edit the profile a second time to make sure information can be changed
   And I click on "Edit Profile"
   And I enter "Updated information again" in "Other Business Information"
   And I click on "Save Profile"
-  Then I see "Profile saved successfully" message
+  Then I see "Profile updated successfully" message

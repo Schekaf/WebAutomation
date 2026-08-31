@@ -65,7 +65,7 @@ Feature: Dashboard
   @SmokeTest
   Scenario: Verify for Incorrect Counts
     Given I open "https://tradehub.com.au"
-    Then I see "Incorrect Counts" is "Correct"
+    Then I see "Correct Counts"
 
   @SmokeTest
   Scenario: Verify for Overlapping Text
@@ -78,17 +78,17 @@ Feature: Dashboard
     Then I do not see "Empty Areas"
 
   @SmokeTest
-  Scenario: Verify for Buttons That Cannot Be Clicked
+  Scenario: Verify for Buttons that Cannot be Clicked
     Given I open "https://tradehub.com.au"
-    Then I see "Buttons That Cannot Be Clicked" is "Functional"
+    Then I see "All Buttons" are "Clickable"
 
   @SmokeTest
   Scenario: Verify for Incorrect Mobile Layouts
     Given I open "https://tradehub.com.au"
-    Then I see "Incorrect Mobile Layouts" is "Correct"
+    Then I see "Mobile Layout" is "Correct"
 
   @SmokeTest
-  Scenario: Verify for Information That Does Not Update After Actions Are Completed
+  Scenario: Verify for Information that Does Not Update After Actions are Completed
     Given I open "https://tradehub.com.au"
     When I perform "Action"
     Then I see "Information" is "Updated"
