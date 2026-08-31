@@ -27,6 +27,10 @@ MANDATORY RULES:
 5. Do NOT invent fake UI elements (e.g., "Break Button", "Mobile Button").
 6. Output ONLY raw Gherkin text. Do NOT use markdown code fences.
 
+CRITICAL GHERKIN SYNTAX RULE:
+A .feature file MUST contain exactly ONE Feature: heading at line 1.
+NEVER use the Feature: keyword more than once per file. Use multiple Scenario: blocks under a single Feature: section for additional test cases.
+
 Generate the feature and scenarios now:
 """
 
