@@ -62,18 +62,22 @@ Scenario: Dynamic parameter usage in feature files
 ```text
 WebAutomation/
 ├── ai_agents/                            # AI agent pipeline (generators & prompts)
-│   ├── core/                             # Shared agent data layer
-│   │   ├── __init__.py
+│   ├── core/                             # Shared agent data layer & shared utilities
+│   │   ├── __init__.py                   # Core package exports
+│   │   ├── model_selector.py             # Interactive CLI model switcher & model registry
 │   │   ├── schemas.py                    # Shared Pydantic schemas
-│   │   └── tradehub_domain.py            # TradeHub domain entities & prompt contexts
-│   ├── qa_test_generator_agent/          # Agent 1: Gherkin -> Feature Files
+│   │   ├── tradehub_domain.py            # TradeHub domain entities & prompt contexts
+│   │   └── utils.py                      # Gherkin sanitization, regex matching & chunking
+│   │
+│   ├── qa_test_generator_agent/          # Agent 1: Checklist -> Gherkin Feature Files
 │   │   ├── __init__.py
-│   │   └── test_generator.py
-│   └── qa_test_step_generator_agent/     # Agent 2: Gherkin -> Behave Step Definitions
+│   │   └── test_generator.py             # TestFeatureGeneratorAgent class (LLM orchestration)
+│   │
+│   └── qa_test_step_generator_agent/     # Agent 2: Feature Steps -> Behave Step Definitions 🛠️ Upcoming!
 │       ├── __init__.py
-│       └── test_step_generator.py        # 🛠️ Upcoming!
+│       └── test_step_generator.py        # TestStepGeneratorAgent class (Missing step engine) 
 │
-├── elements/                             # Locators (if using external ini/json configs)
+├── elements/                             # Locators (external ini/json configs)
 │   ├── home_page.ini
 │   └── tradehub_home.ini
 │
@@ -81,9 +85,10 @@ WebAutomation/
 │   ├── steps/                            # Step definitions (links Gherkin to PageObjects)
 │   │   ├── action_steps.py
 │   │   ├── browser_steps.py
-│   │   └── validation_steps.py
+│   │   ├── validation_steps.py
+│   │   └── generated_by_ai_steps.py      # Auto-generated step definitions from Agent 2
 │   ├── environment.py                    # Behave hooks (driver init, failure screenshots)
-│   └── tradehub_smoke_tests.feature
+│   └── *.feature                         # Auto-generated feature files from Agent 1
 │
 ├── page_objects/                         # Page Object Model Layer
 │   ├── __init__.py
@@ -93,7 +98,6 @@ WebAutomation/
 ├── reports/                              # Test execution outputs & failure artifacts
 │
 ├── utilities/                            # Framework core utilities
-│   ├── __init__.py
 │   ├── common.py                         # General helper methods
 │   ├── element_helper.py                 # Advanced element handling
 │   ├── step_helper.py                    # Step logging / dynamic params
@@ -102,12 +106,56 @@ WebAutomation/
 ├── .env                                  # Local environment variables
 ├── .gitignore                            # Excludes venv, reports, .env, drivers
 ├── behave.ini                            # Behave execution settings
-├── generate_features.py                  # Entry point CLI script for Agent 1
-├── generate_steps.py                     # Entry point CLI script for Agent 2
+├── generate_features.py                  # Entry point CLI runner for Agent 1
+├── generate_steps.py                     # Entry point CLI runner for Agent 2 🛠️ Upcoming!
 ├── README.md                             # Project documentation
 └── requirements.txt                      # Dependencies
 ```
-
+### 📐 AI Agent Pipeline Architecture Schema
+```text
+                               +----------------------------------------+
+                               |     Local LLMs / Ollama Framework      |
+                               | (Qwen 2.5 Coder / Llama 3.2 / Qwen)    |
+                               +-------------------+--------------------+
+                                                   ^
+                                                   | (ChatOllama Invocation)
+                                                   v
++-------------------------------------------------------------------------------------------------------+
+|                                      AI AGENTS PIPELINE                                               |
+|                                                                                                       |
+|   +-------------------------------------------------------------------------------------------+       |
+|   |                                     ai_agents/core/                                       |       |
+|   |  • model_selector.py (CLI Interactive Model Picker)                                       |       |
+|   |  • utils.py          (Gherkin Sanitizer, Regex Pattern Matcher, Section Splitter)         |       |
+|   +----------------------------------------------+--------------------------------------------+       |
+|                                                  |                                                    |
+|                   +------------------------------+------------------------------+                     |
+|                   |                                                             |                     |
+|                   v                                                             v                     |
+|   +---------------+---------------------------+                 +---------------+-----------------+   |
+|   |   qa_test_generator_agent/                |                 |   qa_test_step_generator_agent/ |   |
+|   |   • test_generator.py                     |                 |   • test_step_generator.py      |   |
+|   +---------------+---------------------------+                 +---------------+-----------------+   |
++-------------------|-------------------------------------------------------------|---------------------+   
+                    ^                                                             ^
+                    |                                                             |
++-------------------|-------------------------------------------------------------|---------------------+
+|   CLI RUNNERS     |                                                             |                     |
+|                   |                                                             |                     |
+|         +---------+------------+                                      +---------+------------+        |
+|         | generate_features.py |                                      |  generate_steps.py   |        |
+|         +---------+------------+                                      +---------+------------+        |
++-------------------|-------------------------------------------------------------|---------------------+
+                    |                                                             |
+                    v                                                             v
++-------------------|-------------------------------------------------------------|---------------------+
+|   FRAMEWORK       |                                                             |                     |
+|   ARTIFACTS       v                                                             v                     |
+|            features/tradehub_smoke_tests.feature  ------ (Reads) -------> features/steps/             |
+|            (Generated Gherkin Feature File)                               generated_by_ai_steps.py    |
+|                                                                           (Generated Step Definitions)|
++-------------------------------------------------------------------------------------------------------+
+```
 ## 🚀 Test Execution Guide
 
 Tests are executed using **Behave** (BDD framework). You can customize runs using tags, browser selection, and CLI flags.
