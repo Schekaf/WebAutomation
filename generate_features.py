@@ -1,19 +1,15 @@
 import os
 import re
 import sys
-from ai_agents.core.step_library import STEP_PATTERNS_LIBRARY, get_escaped_step_patterns
+from ai_agents.core.step_library import get_escaped_step_patterns
 from ai_agents.core.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS
+from ai_agents.core.model_selector import select_model_interactively, print_missing_model_error
+from ai_agents.core.utils import sanitize_model_tag_for_filename, clean_gherkin_output, split_instructions_into_sections
 from ollama import ResponseError
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-AVAILABLE_MODELS = {
-    "1": ("Qwen 2.5 Coder 7B (Recommended for BDD)", "qwen2.5-coder:7b"),
-    "2": ("Qwen 2.5 General 7B", "qwen2.5:7b"),
-    "3": ("Llama 3.2 3B (Fast / Small)", "llama3.2:3b"),
-    "4": ("DeepSeek R1 8B", "deepseek-r1:8b"),
-}
 
 PROMPT_TEMPLATE = """You are a Senior QA Automation Engineer writing Behave Gherkin `.feature` scenarios for TradeHub (https://tradehub.com.au).
 
@@ -33,75 +29,6 @@ MANDATORY RULES:
 
 Generate the feature and scenarios now:
 """
-
-
-def select_model_interactively() -> str:
-    """Displays available models and prompts user for choice."""
-    print("=" * 60)
-    print("🤖 SELECT LLM ENGINE FOR FEATURE GENERATION")
-    print("=" * 60)
-
-    for key, (description, tag) in AVAILABLE_MODELS.items():
-        print(f" [{key}] {description} -> (Tag: {tag})")
-
-    print("=" * 60)
-    choice = input("Enter option number [Default: 1]: ").strip()
-
-    # Fallback to option 1 if invalid or empty selection
-    if choice not in AVAILABLE_MODELS:
-        print("⚡ No option chosen or invalid entry. Defaulting to Option [1].\n")
-        choice = "1"
-
-    selected_desc, selected_tag = AVAILABLE_MODELS[choice]
-    print(f"✅ Selected Model: {selected_desc} ({selected_tag})\n")
-    return selected_tag
-
-
-def print_missing_model_error(missing_tag: str):
-    """Displays a clean error message and prompt instructions when a model is not pulled."""
-    print("\n" + "❌ " + "=" * 58)
-    print(f" ERROR: Model '{missing_tag}' is not found locally!")
-    print("=" * 60)
-    print(" Please pull the model(s) using your terminal before running:")
-    print()
-    for _, (_, tag) in AVAILABLE_MODELS.items():
-        prefix = "👉 " if tag == missing_tag else "   "
-        print(f"{prefix}ollama pull {tag}")
-    print("=" * 60 + "\n")
-
-
-def split_instructions_into_sections(raw_text: str) -> list[str]:
-    """Splits raw instructions into section chunks (matching lines starting with numbers like '1. ', '2. ')."""
-    pattern = r'(?=\b\d+\.\s+[A-Z])'
-    sections = re.split(pattern, raw_text)
-    return [sec.strip() for sec in sections if sec.strip()]
-
-
-def clean_gherkin_output(raw_text: str) -> str:
-    """Removes conversational AI intros, markdown artifacts, and code fences."""
-    # Strip markdown code fences
-    cleaned = re.sub(r'```[a-zA-Z]*', '', raw_text).replace('```', '').strip()
-
-    clean_lines = []
-    for line in cleaned.splitlines():
-        trimmed = line.strip()
-        # Filter out conversational headers and markdown bold artifacts
-        if (trimmed.startswith("**") or
-                "Here are the" in trimmed or
-                "Behave Gherkin" in trimmed or
-                trimmed.startswith("Here is")):
-            continue
-        clean_lines.append(line)
-
-    return "\n".join(clean_lines).strip()
-
-
-def sanitize_model_tag_for_filename(model_tag: str) -> str:
-    """Converts a model tag like 'qwen2.5-coder:7b' to a clean file-friendly string 'qwen2_5_coder_7b'."""
-    # Replace colons, hyphens, and dots with underscores
-    clean_tag = re.sub(r"[:\.\-]", "_", model_tag)
-    # Remove any other non-alphanumeric/underscore characters
-    return re.sub(r"[^a-zA-Z0-9_]", "", clean_tag)
 
 
 def main():
