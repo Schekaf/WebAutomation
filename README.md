@@ -153,8 +153,8 @@ WebAutomation/
 +-------------------|-------------------------------------------------------------|---------------------+
 |   FRAMEWORK       |                                                             |                     |
 |   ARTIFACTS       v                                                             v                     |
-|            features/tradehub_smoke_tests.feature  ------ (Reads) -------> features/steps/             |
-|            (Generated Gherkin Feature File)                               generated_by_ai_steps.py    |
+|            features/*************.feature  ---------- (Reads) ----------> features/steps/             |
+|            (Generated Gherkin Feature Files)                              generated_by_ai_steps.py    |
 |                                                                           (Generated Step Definitions)|
 +-------------------------------------------------------------------------------------------------------+
 ```
