@@ -23,7 +23,18 @@ def timer(func):
     return wrapper
 
 
-@timer
+def pre_mask_step(step_text: str) -> str:
+    """
+    Masks string literals in quotes and numbers into explicit placeholders BEFORE
+    Drain processes them, protecting verbs like 'click', 'enter', and 'see'.
+    """
+    # Preserve quotes, mask inner content to "<PARAM>"
+    masked = re.sub(r'(["\'])(.*?)\1', r'"<PARAM>"', step_text)
+    # Mask standalone numbers
+    masked = re.sub(r'\b\d+(\.\d+)?\b', '<PARAM>', masked)
+    return masked
+
+
 def collapse_drain_patterns(drain_lines: list[str]) -> list[str]:
     """
     Transforms Drain3 output lines by replacing all double-quoted strings
@@ -62,7 +73,6 @@ def collapse_drain_patterns(drain_lines: list[str]) -> list[str]:
     return sorted(list(collapsed_patterns))
 
 
-@timer
 def aggregate_by_verb_prefix(patterns: list[str]) -> list[str]:
     """
   If a longer, more parameterized pattern exists for a verb prefix,
