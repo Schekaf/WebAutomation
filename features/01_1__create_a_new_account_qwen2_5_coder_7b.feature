@@ -1,6 +1,6 @@
 Feature: Create a New Account
 
-@SmokeTest
+@SmokeTest @Test
 Scenario: Verify account creation process
   Given I open "https://tradehub.com.au"
   When I click on "Register"
