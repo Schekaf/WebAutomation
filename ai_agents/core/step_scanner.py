@@ -12,7 +12,6 @@ def strip_gherkin_prefix(step_text: str) -> str:
     return re.sub(r"^(Given|When|Then|And|But)\s+", "", step_text.strip(), flags=re.IGNORECASE)
 
 
-@timer
 def get_undefined_steps_via_behave(feature_files: List[str]) -> List[str]:
     """
     Runs Behave in dry-run mode per feature file to identify genuinely missing steps,
