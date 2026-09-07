@@ -1,17 +1,13 @@
 import os
 import sys
 
-from ai_agents.core.model_selector import select_model_interactively
-from ai_agents.qa_test_step_generator_agent.test_step_generator import TestStepGeneratorAgent
+from ai_agents.qa_test_step_generator_agent.test_step_generator import StepGeneratorAgent
 
 
 def main():
     print("=" * 65)
     print("🚀 Starting Batch QA Test Step Generator Agent")
     print("=" * 65)
-
-    # Interactive Model Selection from ai_agents/core
-    selected_model = select_model_interactively()
 
     # Define paths relative to project root
     project_root = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +23,7 @@ def main():
     print(f"📝 AI Output File     : {output_ai_steps_file}\n")
 
     # Initialize agent with chosen model
-    agent = TestStepGeneratorAgent(model_name=selected_model)
+    agent = StepGeneratorAgent()
 
     try:
         agent.generate_missing_steps(

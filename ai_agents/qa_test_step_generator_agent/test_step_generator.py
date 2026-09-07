@@ -39,7 +39,7 @@ def clear_ai_generated_steps_file(output_file_path: str):
         f.truncate(0)
 
 
-class TestStepGeneratorAgent:
+class StepGeneratorAgent:
 
     def __init__(self, model_name: str = "qwen2.5-coder:7b"):
         self.model_name = model_name
