@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel
 
+from ai_agents.core.config import get_agent_model
 from ai_agents.core.schemas import FeatureSuite, CoveragePlan
 from ai_agents.core.tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE
 from ai_agents.core.step_library import STEP_PATTERNS_LIBRARY, get_escaped_step_patterns
@@ -64,10 +65,14 @@ class TestGeneratorAgent:
     schema-validated Gherkin FeatureSuite objects.
     """
 
-    def __init__(self, model_name: str = "qwen2.5-coder:7b"):
+    def __init__(self, model_name: str | None = None):
+        # 1. Resolve agent name and model lookup dynamically
+        self.agent_name = self.__class__.__name__
+        self.model_name = model_name or get_agent_model(self.agent_name)
+
         # 1. format="json" forces local GBNF grammar sampler
         # 2. low temperature (0.1) enforces strict rule-following
-        self.llm = ChatOllama(model=model_name,  temperature=0.1, format="json")
+        self.llm = ChatOllama(model=self.model_name,  temperature=0.1, format="json")
         self.structured_llm = self.llm.with_structured_output(FeatureSuite)
 
     def generate_tests_for_instructions(

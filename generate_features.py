@@ -8,6 +8,9 @@ from ollama import ResponseError
 from ai_agents.qa_coverage_planner_agent.test_coverage_planner_agent import CoveragePlannerAgent
 from ai_agents.qa_test_generator_agent.test_generator import TestGeneratorAgent
 
+# Central Configuration
+from ai_agents.core.config import GENERAL, CODER
+
 # Domain & Step Libraries
 from ai_agents.core.step_library import get_escaped_step_patterns
 from ai_agents.core.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS, TRADEHUB_BUSINESS_KNOWLEDGE
@@ -18,13 +21,14 @@ from ai_agents.core.utils import sanitize_model_tag_for_filename, split_instruct
 
 
 def main():
-    # Step 1: Select LLM model interactively
-    selected_model_tag = select_model_interactively()
-    model_slug = sanitize_model_tag_for_filename(selected_model_tag)
+    print("Initializing Agentic Test Automation Pipeline...")
 
-    # Step 2: Instantiate Phase 0 and Phase 1 Agents
-    coverage_planner = CoveragePlannerAgent(model_name=selected_model_tag)
-    test_generator = TestGeneratorAgent(model_name=selected_model_tag)
+    # Instantiate Phase 0 and Phase 1 Agents statically
+    coverage_planner = CoveragePlannerAgent()
+    test_generator = TestGeneratorAgent()
+
+    # File naming tag reflecting the synthesis model
+    model_slug = sanitize_model_tag_for_filename(test_generator.model_name)
 
     # Step 3: Split raw instructions into distinct sections
     sections = split_instructions_into_sections(TRADEHUB_RAW_INSTRUCTIONS)

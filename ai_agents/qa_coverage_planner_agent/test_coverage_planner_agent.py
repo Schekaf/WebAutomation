@@ -1,5 +1,5 @@
 from langchain_ollama import ChatOllama
-from pydantic import BaseModel
+from ai_agents.core.config import get_agent_model
 
 from ai_agents.core.schemas import CoveragePlan
 
@@ -10,10 +10,15 @@ class CoveragePlannerAgent:
     test scenarios required for complete test coverage before generating Gherkin.
     """
 
-    def __init__(self, model_name: str = "qwen2.5:7b", temperature: float = 0.0):
+    def __init__(self, model_name: str | None = None):
+        # 1. Resolve agent name and model lookup dynamically
+        self.agent_name = self.__class__.__name__
+        self.model_name = model_name or get_agent_model(self.agent_name)
+
+        # 2. Initialize Ollama instance with resolved model
         self.llm = ChatOllama(
-            model=model_name,
-            temperature=temperature,
+            model=self.model_name,
+            temperature=0.0,
             format="json"
         )
         self.structured_llm = self.llm.with_structured_output(CoveragePlan)
