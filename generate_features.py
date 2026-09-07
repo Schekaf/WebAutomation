@@ -1,53 +1,34 @@
 import os
 import re
 import sys
-from ai_agents.core.step_library import get_escaped_step_patterns
-from ai_agents.core.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS
-from ai_agents.core.model_selector import select_model_interactively, print_missing_model_error
-from ai_agents.core.utils import sanitize_model_tag_for_filename, clean_gherkin_output, split_instructions_into_sections
+from pathlib import Path
 from ollama import ResponseError
-from langchain_ollama import ChatOllama
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 
+# Core Agents
+from ai_agents.qa_coverage_planner_agent.test_coverage_planner_agent import CoveragePlannerAgent
+from ai_agents.qa_test_generator_agent.test_generator import TestGeneratorAgent
 
-PROMPT_TEMPLATE = """You are a Senior QA Automation Engineer writing Behave Gherkin `.feature` scenarios for TradeHub (https://tradehub.com.au).
+# Domain & Step Libraries
+from ai_agents.core.step_library import get_escaped_step_patterns
+from ai_agents.core.tradehub_domain import TRADEHUB_RAW_INSTRUCTIONS, TRADEHUB_BUSINESS_KNOWLEDGE
 
-TARGET SECTION REQUIREMENTS:
-{section_text}
-
-STRICT STEP PATTERNS LIBRARY (EVERY STEP MUST STRICTLY MATCH A PATTERN BELOW):
-{step_patterns}
-
-MANDATORY RULES:
-1. Output EXACTLY ONE `Feature:` heading corresponding to the section title.
-2. Generate specific Scenarios or Scenario Outlines for the requirements in this section.
-3. Use @CamelCase tags for every scenario (e.g., @SmokeTest, @NegativeTesting).
-4. DO NOT write conversational text, markdown bolding (e.g., **Header**), or commentary.
-5. Do NOT invent fake UI elements (e.g., "Break Button", "Mobile Button").
-6. Output ONLY raw Gherkin text. Do NOT use markdown code fences.
-
-CRITICAL GHERKIN SYNTAX RULE:
-A .feature file MUST contain exactly ONE Feature: heading at line 1.
-NEVER use the Feature: keyword more than once per file. Use multiple Scenario: blocks under a single Feature: section for additional test cases.
-
-Generate the feature and scenarios now:
-"""
+# Helpers & Selectors
+from ai_agents.core.model_selector import select_model_interactively, print_missing_model_error
+from ai_agents.core.utils import sanitize_model_tag_for_filename, split_instructions_into_sections
 
 
 def main():
     # Step 1: Select LLM model interactively
     selected_model_tag = select_model_interactively()
     model_slug = sanitize_model_tag_for_filename(selected_model_tag)
-    llm = ChatOllama(model=selected_model_tag, temperature=0.1)
 
-    # Step 2: Prepare the prompt template and chain
-    prompt = PromptTemplate.from_template(PROMPT_TEMPLATE)
-    chain = prompt | llm | StrOutputParser()
+    # Step 2: Instantiate Phase 0 and Phase 1 Agents
+    coverage_planner = CoveragePlannerAgent(model_name=selected_model_tag)
+    test_generator = TestGeneratorAgent(model_name=selected_model_tag)
 
     # Step 3: Split raw instructions into distinct sections
     sections = split_instructions_into_sections(TRADEHUB_RAW_INSTRUCTIONS)
-    print(f"Found {len(sections)} distinct sections to process...\n")
+    print(f"Found {len(sections)} distinct section(s) to process...\n")
 
     # Step 4: Create output directory for generated feature files
     output_dir = "features"
@@ -57,20 +38,34 @@ def main():
         # Extract section title (e.g., "1. Create a New Account")
         first_line = section.split('\n')[0].strip()
 
-        # Create a clean filename slug (e.g., "01_create_a_new_account.feature")
+        # Create a clean filename slug
         sanitized_name = re.sub(r'[^a-zA-Z0-9_]', '_', first_line.lower())
         file_name = f"{index:02d}_{sanitized_name}_{model_slug}.feature"
         file_path = os.path.join(output_dir, file_name)
 
-        print(f"[{index}/{len(sections)}] Generating: {first_line} -> {file_name}...")
+        print(f"[{index}/{len(sections)}] Processing Section: {first_line}")
 
         try:
-            raw_output = chain.invoke(
-                {
-                    "section_text": section,
-                    "step_patterns": get_escaped_step_patterns(),
-                }
+            # -----------------------------------------------------------------
+            # PHASE 0: Generate Structured Coverage Plan Matrix
+            # -----------------------------------------------------------------
+            print("  ↳ Phase 0: Planning test scenario coverage matrix...")
+            coverage_plan = coverage_planner.plan_coverage(
+                requirement_text=section,
+                section_name=first_line
             )
+            print(f"    Planned {coverage_plan.total_scenarios_planned} test scenario(s).")
+
+            # -----------------------------------------------------------------
+            # PHASE 1: Generate Schema-Validated Gherkin FeatureSuite
+            # -----------------------------------------------------------------
+            print("  ↳ Phase 1: Synthesizing Gherkin feature suite...")
+            feature_suite = test_generator.generate_tests_for_instructions(
+                coverage_plan=coverage_plan,
+                step_patterns=get_escaped_step_patterns(),
+                business_knowledge=TRADEHUB_BUSINESS_KNOWLEDGE
+            )
+
         except ResponseError as e:
             if e.status_code == 404 or "not found" in str(e).lower():
                 print_missing_model_error(selected_model_tag)
@@ -78,11 +73,20 @@ def main():
             else:
                 raise e
 
-        cleaned_gherkin = clean_gherkin_output(raw_output)
-
-        # Write to an individual .feature file for Behave compatibility
+        # ---------------------------------------------------------------------
+        # Write FeatureSuite directly to .feature file using typed properties
+        # ---------------------------------------------------------------------
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(cleaned_gherkin + "\n")
+            f.write(f"Feature: {feature_suite.feature_title}\n\n")
+            for scenario in feature_suite.scenarios:
+                if scenario.tag:
+                    f.write(f"  {scenario.tag}\n")
+                f.write(f"  Scenario: {scenario.name}\n")
+                for step in scenario.steps:
+                    f.write(f"    {step.keyword} {step.statement}\n")
+                f.write("\n")
+
+        print(f"  ✔ Generated feature file: {file_name}\n")
 
     print(f"\nSuccess! Generated {len(sections)} distinct .feature files in: {os.path.abspath(output_dir)}")
 
