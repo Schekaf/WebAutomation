@@ -3,6 +3,9 @@ import os
 import re
 import functools
 import time
+from drain3 import TemplateMiner
+from drain3.masking import MaskingInstruction
+from drain3.template_miner_config import TemplateMinerConfig
 
 PERF_LIST = {
 }
@@ -131,7 +134,8 @@ def discover_all_feature_files(features_dir: str, model_slug: str = None) -> lis
     if model_slug:
         # Match files ending with `_{model_slug}.feature`
         target_suffix = f"_{model_slug}.feature"
-        matched_files = [f for f in all_feature_files if os.path.basename(f).endswith(target_suffix)]
+        matched_files = [f for f in all_feature_files if
+                         os.path.basename(f).endswith(target_suffix) and "archive" not in f.lower()]
         return sorted(matched_files)
 
     return sorted(all_feature_files)
@@ -143,3 +147,46 @@ def sanitize_model_tag_for_filename(model_tag: str) -> str:
     clean_tag = re.sub(r"[:\.\-]", "_", model_tag)
     # Remove any other non-alphanumeric/underscore characters
     return re.sub(r"[^a-zA-Z0-9_]", "", clean_tag)
+
+
+def clear_ai_generated_steps_file(output_file_path: str):
+    """Safely clears/truncates the generated step file without deleting it."""
+    os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+    with open(output_file_path, "w", encoding="utf-8") as f:
+        f.truncate(0)
+
+
+def collapse_drain_wildcards(drain_patterns: list[str]) -> list[str]:
+    """
+    Collapses multi-token Drain wildcards like '<*> <*> <*>' into a single '<*>'
+    and returns a deduplicated list.
+    """
+    # Matches one or more '<*>' tokens separated by spaces/whitespace
+    wildcard_pattern = re.compile(r'(?:<\*>\s*)+')
+
+    unique_patterns = set()
+    for pattern in drain_patterns:
+        # Replace consecutive wildcards with a single '<*>'
+        collapsed = wildcard_pattern.sub('<*> ', pattern).strip()
+        unique_patterns.add(collapsed)
+
+    return list(unique_patterns)
+
+
+def mine_patterns_with_drain(raw_steps: list[str]) -> list[str]:
+    """Runs raw Drain3 log template mining on raw undefined steps."""
+    config = TemplateMinerConfig()
+    config.profiling_enabled = False
+    config.drain_depth = 5
+    config.drain_sim_th = 0.1  # Slightly lower threshold lets Drain group similar steps
+    config.masking_instructions = [
+    ]
+
+    miner = TemplateMiner(config=config)
+
+    for step in raw_steps:
+        miner.add_log_message(step)
+
+    # Return pure cluster templates from Drain3
+    drained_steps = [cluster.get_template() for cluster in miner.drain.clusters]
+    return collapse_drain_wildcards(drained_steps)
