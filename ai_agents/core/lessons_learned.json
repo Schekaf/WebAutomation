@@ -1,0 +1,38 @@
+[
+  {
+    "agent_id": "AutomationFeasibilityAgent",
+    "category": "drain_mapping_drift",
+    "original_output": "Step: And I accept the Terms and Conditions | Pattern: I do not <*>",
+    "corrected_output": "New Pattern: I accept <*>",
+    "root_cause": "The step verb 'accept' does not match the pattern action 'do not'.",
+    "rule_derived": "Ensure matched patterns strictly preserve step sentence structure without adding extra terms.",
+    "occurrence_count": 1
+  },
+  {
+    "agent_id": "AutomationFeasibilityAgent",
+    "category": "drain_mapping_drift",
+    "original_output": "Step: And I accept the Terms and Conditions | Pattern: I click on <*>",
+    "corrected_output": "New Pattern: I accept <*>",
+    "root_cause": "The step verb 'accept' does not match the pattern action 'click on'.",
+    "rule_derived": "Ensure matched patterns strictly preserve step sentence structure without adding extra terms.",
+    "occurrence_count": 1
+  },
+  {
+    "agent_id": "AutomationFeasibilityAgent",
+    "category": "drain_mapping_drift",
+    "original_output": "Step: Then I see Success Message is Visible | Pattern: I see \"You <*> is <*>\" is Visible",
+    "corrected_output": "New Pattern: I see <*>",
+    "root_cause": "The step does not match the pattern in structure or verb.",
+    "rule_derived": "Ensure matched patterns strictly preserve step sentence structure without adding extra terms.",
+    "occurrence_count": 1
+  },
+  {
+    "agent_id": "AutomationFeasibilityAgent",
+    "category": "drain_mapping_drift",
+    "original_output": "Step: Then I see Error Message is Visible | Pattern: I see \"You have <*> number of free tender postings allowed\" is Visible",
+    "corrected_output": "New Pattern: I see <*> is Visible",
+    "root_cause": "The step does not match the pattern in terms of content. The step mentions 'Error Message is Visible' while the pattern suggests 'Terms and Conditions'.",
+    "rule_derived": "Ensure matched patterns strictly preserve step sentence structure without adding extra terms.",
+    "occurrence_count": 1
+  }
+]
