@@ -13,6 +13,8 @@ AGENT_MODEL_MAP = {
     "TestGeneratorAgent": CODER,
 
     # Phase 2: Step Generation
+    "AutomationFeasibilityAgent": CODER,
+    "StepSkeletonAgent": CODER,
     "StepGeneratorAgent": CODER,
     "StepReviewAgent": CODER,
 
