@@ -1,47 +1,39 @@
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import ChatOllama
-
-from ai_agents.core.config import get_agent_model
+from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.utils import clean_gherkin_output
 
-PROMPT = """You are an Expert Test Automation Engineer specializing in Python Behave and Web UI Automation.
-Your task is to take Python Behave step definition skeletons (signatures with `pass`) and implement realistic execution code for a Web UI framework.
-
-CRITICAL RULES:
-- Implement the body of each step function replace `pass` with clean execution logic (e.g., using context, element interactions, or assertions).
-- Keep parameter names and decorators (@given, @when, @then, @step) intact.
-- Do NOT output markdown code fences (```) or explanations.
-- Output ONLY valid, executable Python code.
+STEP_GENERATION_PROMPT = """You are an Expert Test Automation Engineer specializing in Python Behave and Web UI Automation.
+Your task is to take Python Behave step definition skeletons and implement realistic execution logic for a Web UI framework.
 
 STEP SKELETONS:
 {skeletons}
+
+LESSONS LEARNED (PAST BUG FIXES TO REMEMBER):
+{lessons_learned}
+
+CRITICAL EXECUTION RULES:
+- REQUIRED IMPORTS: Include all necessary imports at the top of the file (e.g., `import time`, `from behave import given, when, then, step`).
+- KEEP UNIQUE FUNCTION NAMES: Retain the unique function name for each step (e.g., `step_click_element`, `step_enter_text`). DO NOT collapse or rename functions to `def step_impl`.
+- PRESERVE DECORATORS: Maintain exact `@given`, `@when`, `@then` strings and parameter signatures.
+- IMPLEMENT BODY: Replace `pass` with clean execution logic using `context.page` or `context.browser`.
+- NO STACKING: Do NOT combine multiple step decorators into a single wildcard function `def step_impl(context, *args): pass`.
+- OUTPUT ONLY VALID PYTHON CODE: Do NOT output markdown code fences (```) or explanatory prose.
 
 Python Implementation:
 """
 
 
-class StepGeneratorAgent:
+class StepGeneratorAgent(BaseAgent):
     """
     Phase 3 Code Generator Agent: Accepts skeleton function definitions (`pass`)
     and implements standard UI automation logic.
     """
 
-    def __init__(self, model_name: str | None = None):
-        # 1. Resolve agent name and lookup default model from central config
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.0, timeout=60.0, **kwargs)
 
-        # 2. Initialize LLM instance using the resolved static model
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=0.0,
-            repeat_penalty=1.2
-        )
-
-        # 3. Build execution chain
-        prompt = PromptTemplate.from_template(PROMPT)
-        self.chain = prompt | self.llm | StrOutputParser()
+        # 2. Create chain via BaseAgent helper
+        self.chain = self.create_chain(STEP_GENERATION_PROMPT)
 
     def generate_missing_steps(self, combined_skeletons: str) -> str:
         """
@@ -50,9 +42,11 @@ class StepGeneratorAgent:
         if not combined_skeletons or not combined_skeletons.strip():
             return ""
 
-        raw_generated_code = self.chain.invoke({
-            "skeletons": combined_skeletons
-        })
+        # Invokes chain via BaseAgent helper (automatically injects "lessons_learned")
+        raw_generated_code = self.invoke(
+            self.chain,
+            {"skeletons": combined_skeletons}
+        )
 
         # Sanitize and return draft code
         return clean_gherkin_output(raw_generated_code)
