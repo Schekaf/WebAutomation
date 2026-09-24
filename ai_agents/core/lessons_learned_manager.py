@@ -27,22 +27,25 @@ class LessonsLearnedManager:
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump([], f, indent=2)
 
-    def load_lessons(self) -> List[Dict[str, Any]]:
+    def load_lessons(self, agent_id: str | str = "all_lessons") -> List[Dict[str, Any]]:
         """Reads all lessons from lessons_learned.json."""
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                lessons = json.load(f)
+                if agent_id == "all_lessons":
+                    return lessons
+                return [l for l in lessons if l.get("agent_id") == agent_id]
         except (json.JSONDecodeError, FileNotFoundError):
             return []
 
     def add_lesson(
-        self,
-        agent_id: str,
-        category: str,
-        original_output: str,
-        corrected_output: str,
-        root_cause: str,
-        rule_derived: str,
+            self,
+            agent_id: str,
+            category: str,
+            original_output: str,
+            corrected_output: str,
+            root_cause: str,
+            rule_derived: str,
     ) -> None:
         """
         Logs a fix applied by a Review/Fixer agent. If an identical fix/rule
@@ -54,9 +57,9 @@ class LessonsLearnedManager:
         matched = False
         for entry in lessons:
             if (
-                entry.get("agent_id") == agent_id
-                and entry.get("original_output") == original_output
-                and entry.get("corrected_output") == corrected_output
+                    entry.get("agent_id") == agent_id
+                    and entry.get("original_output") == original_output
+                    and entry.get("corrected_output") == corrected_output
             ):
                 entry["occurrence_count"] = entry.get("occurrence_count", 1) + 1
                 matched = True
