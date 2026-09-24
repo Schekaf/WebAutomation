@@ -1,20 +1,9 @@
 import subprocess
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import ChatOllama
-
-from ai_agents.core.config import get_agent_model
+from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.utils import clean_gherkin_output
 
-REVIEW_PROMPT = """You are an expert Python QA Automation Engineer specializing in the Behave BDD framework.
-Your job is to review Python step definition code and fix any syntax errors, formatting issues, or linting errors reported by Ruff.
-
-CRITICAL RULES:
-- Fix all syntax errors, bad imports, and linting issues identified in the Ruff feedback.
-- Preserve the exact test logic, step decorators (@given, @when, @then, @step), and function signatures unless a syntax fix directly requires a modification.
-- Ensure all function bodies remain valid Python.
-- Do NOT output markdown explanations, conversational prose, or code block wrappers.
-- Output ONLY valid, executable Python code.
+REVIEW_PROMPT = """You are an Expert Python QA Automation Engineer specializing in the Behave BDD framework.
+Your job is to review Python step definition code, fix syntax/AST errors, and resolve linting issues reported by Ruff.
 
 --- RUFF FEEDBACK ---
 {ruff_errors}
@@ -22,28 +11,32 @@ CRITICAL RULES:
 --- ORIGINAL CODE ---
 {code_str}
 
+LESSONS LEARNED:
+{lessons_learned}
+
+CRITICAL REVIEW RULES:
+- FIX DUPLICATE FUNCTION NAMES: If any functions are named `step_impl`, rename them uniquely to match their decorator intent (e.g., `step_impl_1`, `step_impl_2` or `step_enter_value`).
+- FIX SYNTAX ERRORS: Fix mismatched quotes, invalid decorator parameters, missing arguments, or bad import paths.
+- REMOVE WILDCARD STACKS: If you find stacked decorators over `def step_impl(context, *args): pass`, expand them back into individual functions.
+- PRESERVE TEST LOGIC: Do not alter element interaction logic unless required to fix syntax errors.
+- OUTPUT RAW PYTHON ONLY: Do NOT output markdown explanations, code block wrappers (```python), or summaries.
+
 Python Code:
 """
 
 
-class StepReviewAgent:
+class StepReviewAgent(BaseAgent):
     """Agent that takes step definition code along with Ruff error reports and fixes it using an LLM."""
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.0):
-        # 1. Resolve agent name and lookup default model from central config
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.0, timeout=60.0, **kwargs)
 
-        # 2. Instantiate ChatOllama internally
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=temperature
-        )
+        # 2. Create chain via BaseAgent helper
+        self.chain = self.create_chain(REVIEW_PROMPT)
 
-        prompt = PromptTemplate.from_template(REVIEW_PROMPT)
-        self.chain = prompt | self.llm | StrOutputParser()
-
-    def run_ruff_check(self, code_str: str) -> str:
+    @staticmethod
+    def run_ruff_check(code_str: str) -> str:
         """Passes Python code as a raw string to Ruff via stdin and returns stdout error output."""
         try:
             result = subprocess.run(
@@ -68,7 +61,9 @@ class StepReviewAgent:
         if not ruff_errors:
             return code_str
 
-        raw_fix = self.chain.invoke(
+        # Invokes chain via BaseAgent helper (automatically injects "lessons_learned")
+        raw_fix = self.invoke(
+            self.chain,
             {"code_str": code_str, "ruff_errors": ruff_errors}
         )
         return clean_gherkin_output(raw_fix)
