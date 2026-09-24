@@ -72,7 +72,7 @@ def main():
 
         except ResponseError as e:
             if e.status_code == 404 or "not found" in str(e).lower():
-                print_missing_model_error(selected_model_tag)
+                print_missing_model_error(test_generator.model_name)
                 sys.exit(1)
             else:
                 raise e
