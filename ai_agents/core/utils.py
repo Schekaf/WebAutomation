@@ -2,6 +2,7 @@ import glob
 import os
 import re
 import functools
+import subprocess
 import time
 from drain3 import TemplateMiner
 from drain3.masking import MaskingInstruction
@@ -22,6 +23,32 @@ def timer(func):
         print(f"\033[33m⚡ [PERF] `{func.__name__}` took {t_end - t_start:.3f}s to run.\033[0m")
         PERF_LIST[func.__name__] = t_end - t_start
         return result
+
+    return wrapper
+
+
+def rest_check(func):
+    """
+    Decorator to monitor GPU temperature before running a function.
+    If GPU temperature exceeds `temp_limit`, pauses execution for `cooldown_sec`.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            output = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+                encoding="utf-8"
+            )
+            temp = int(output.strip().split("\n")[0])
+
+            if temp >= 80:
+                print(f"\n🔥 [Thermal Guard] GPU temp high: 80°C! Pausing agent for 60 seconds...")
+                time.sleep(60)
+                print("❄️ Resuming execution.")
+        except Exception as e:
+            pass  # Ignore if
+
+        return func(*args, **kwargs)
 
     return wrapper
 
