@@ -11,11 +11,11 @@ AGENT_MODEL_MAP = {
 
     # Phase 1: Test Generation & Remediation
     "TestGeneratorAgent": CODER,
-    "TestFixerAgent": CODER,             # <-- ADDED
+    "TestFixerAgent": CODER,
 
     # Phase 2: Step Generation & Audit
     "AutomationFeasibilityAgent": CODER,
-    "PatternAuditAgent": CODER,          # <-- ADDED
+    "PatternAuditAgent": CODER,
     "PatternResolutionAgent": CODER,
     "StepSkeletonAgent": CODER,
     "StepGeneratorAgent": CODER,
