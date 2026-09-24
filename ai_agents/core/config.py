@@ -9,11 +9,14 @@ AGENT_MODEL_MAP = {
     "XrayToGherkinAgent": CODER,
     "GherkinSyntaxAgent": CODER,
 
-    # Phase 1: Test Generation
+    # Phase 1: Test Generation & Remediation
     "TestGeneratorAgent": CODER,
+    "TestFixerAgent": CODER,             # <-- ADDED
 
-    # Phase 2: Step Generation
+    # Phase 2: Step Generation & Audit
     "AutomationFeasibilityAgent": CODER,
+    "PatternAuditAgent": CODER,          # <-- ADDED
+    "PatternResolutionAgent": CODER,
     "StepSkeletonAgent": CODER,
     "StepGeneratorAgent": CODER,
     "StepReviewAgent": CODER,
