@@ -1,16 +1,17 @@
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable, Set, Tuple
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import ChatOllama
 
-from ai_agents.core.config import get_agent_model
-from ai_agents.core.lessons_learned_manager import LessonsLearnedManager
+from langchain_core.output_parsers import JsonOutputParser
+
+from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.step_library import PatternRegistry
 from ai_agents.core.utils import timer, rest_check
 
 PATTERN_AUDIT_PROMPT = """You are a QA Pattern Audit Agent.
+
+LESSONS LEARNED (PAST FAILURE MODES TO AVOID):
+{lessons_learned}
 
 Your ONLY task is to judge whether "assigned_pattern" semantically and structurally matches "step_text".
 
@@ -45,26 +46,27 @@ Output JSON ONLY matching this format:
 """
 
 
-class PatternAuditAgent:
+class PatternAuditAgent(BaseAgent):
     """
     Lightweight auditor that checks step-to-pattern alignment.
     Returns binary match/mismatch flags without searching or suggesting new patterns.
     """
 
-    def __init__(self, model_name: str | None = None):
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
-
-        self.llm = ChatOllama(
-            model=self.model_name,
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(
             temperature=0.0,
+            format_json=True,
             timeout=30.0,
             keep_alive="0s",  # Instantly release memory
-            format="json"
+            **kwargs
         )
-        prompt = PromptTemplate.from_template(PATTERN_AUDIT_PROMPT)
-        self.chain = prompt | self.llm | StrOutputParser()
-        self.lessons_manager = LessonsLearnedManager()
+
+        # 2. Build audit evaluation chain using JsonOutputParser
+        self.chain = self.create_chain(
+            PATTERN_AUDIT_PROMPT,
+            output_parser=JsonOutputParser()
+        )
 
     @timer
     @rest_check
@@ -76,10 +78,13 @@ class PatternAuditAgent:
         if not steps:
             return []
         try:
-            raw_response = self.chain.invoke({
-                "scenario_payload": json.dumps(steps, indent=2, ensure_ascii=False)
-            })
-            audit_out = json.loads(raw_response)
+            # BaseAgent.invoke automatically handles lessons_learned injection
+            audit_out = self.invoke(
+                self.chain,
+                {
+                    "scenario_payload": json.dumps(steps, indent=2, ensure_ascii=False)
+                }
+            )
             return audit_out.get("audit_results", [])
         except Exception as e:
             print(f"   ⚠️ Scenario audit error: {e}")
@@ -115,8 +120,9 @@ class PatternAuditAgent:
         step_entry["matched_pattern"] = clean_new_p
 
         # Log lesson learned if pattern drift occurred
-        if lessons_manager and clean_new_p != clean_old_p:
-            lessons_manager.add_lesson(
+        mgr = lessons_manager or self.lessons_manager
+        if mgr and clean_new_p != clean_old_p:
+            mgr.add_lesson(
                 agent_id="AutomationFeasibilityAgent",
                 category="drain_mapping_drift",
                 original_output=f"Step: {s_text} | Pattern: {clean_old_p}",
@@ -125,6 +131,7 @@ class PatternAuditAgent:
                 rule_derived="Ensure matched patterns strictly preserve step sentence structure."
             )
 
+    @rest_check
     def _process_single_scenario(
             self,
             scenario: Dict[str, Any],
@@ -173,23 +180,23 @@ class PatternAuditAgent:
 
         return s_title
 
-    def _load_feedback_file(self, feature_path: str) -> Tuple[Optional[Path], List[Dict[str, Any]]]:
+    def _load_feedback_file(self, feature_path: str) -> Tuple[Optional[Path], Dict[str, Any]]:
         """Loads and parses the feedback JSON file corresponding to a feature file."""
         feat_path = Path(feature_path)
         feedback_path = feat_path.parent / f"{feat_path.stem}_feasibility_feedback.json"
 
         if not feedback_path.exists():
             print(f"⚠️ Feedback file not found: {feedback_path}")
-            return None, []
+            return None, {}
 
         try:
             with open(feedback_path, "r", encoding="utf-8") as f:
                 return feedback_path, json.load(f)
         except (json.JSONDecodeError, Exception) as e:
             print(f"❌ Error reading feedback file {feedback_path}: {e}")
-            return None, []
+            return None, {}
 
-    def _save_feedback_file(self, feedback_path: Path, evaluation_results: List[Dict[str, Any]]) -> None:
+    def _save_feedback_file(self, feedback_path: Path, evaluation_results: Dict[str, Any]) -> None:
         """Saves updated scenario results back to the feedback JSON file."""
         with open(feedback_path, "w", encoding="utf-8") as f:
             json.dump(evaluation_results, f, indent=2, ensure_ascii=False)
@@ -197,6 +204,7 @@ class PatternAuditAgent:
     # -------------------------------------------------------------------------
     # 3. Main Orchestration Method (Clean & Readable)
     # -------------------------------------------------------------------------
+    @rest_check
     def audit_and_remediate_feature(
             self,
             feature_path: str,
@@ -211,7 +219,7 @@ class PatternAuditAgent:
 
         approved_titles: Set[str] = set()
 
-        for scenario in evaluation_results.get("scenarios"):
+        for scenario in evaluation_results.get("scenarios", []):
             approved_title = self._process_single_scenario(
                 scenario=scenario,
                 registry=registry,
