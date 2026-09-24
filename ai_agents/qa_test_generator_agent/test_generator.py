@@ -1,14 +1,8 @@
-import os
-from openai import OpenAI
 from dotenv import load_dotenv
-from langchain_ollama import ChatOllama
-from pydantic import BaseModel
+from langchain_core.prompts import PromptTemplate
 
-from ai_agents.core.config import get_agent_model
+from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.schemas import FeatureSuite, CoveragePlan
-from ai_agents.core.tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE
-from ai_agents.core.step_library import STEP_PATTERNS_LIBRARY, get_escaped_step_patterns
-from langchain_ollama import ChatOllama
 
 load_dotenv()
 
@@ -22,6 +16,9 @@ Requirement Section: {requirement_section}
 
 PLANNED SCENARIOS TO TRANSLATE:
 {coverage_plan}
+
+LESSONS LEARNED (STRICT RULES TO AVOID PAST FAILURE MODES):
+{lessons_learned}
 
 CRITICAL SYNTAX RULES:
 1. Scenario tags MUST use @CamelCase (e.g., @LoginSuccess, @RegisterAccount). Preserve tags from the CoveragePlan where applicable.
@@ -59,35 +56,39 @@ CRITICAL RULES FOR GENERATION:
 """
 
 
-class TestGeneratorAgent:
+class TestGeneratorAgent(BaseAgent):
     """
     Phase 1 Agent: Translates structured CoveragePlan objects into complete,
     schema-validated Gherkin FeatureSuite objects.
     """
 
-    def __init__(self, model_name: str | None = None):
-        # 1. Resolve agent name and model lookup dynamically
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.1, format_json=True, **kwargs)
 
-        # 1. format="json" forces local GBNF grammar sampler
-        # 2. low temperature (0.1) enforces strict rule-following
-        self.llm = ChatOllama(model=self.model_name,  temperature=0.1, format="json")
-        self.structured_llm = self.llm.with_structured_output(FeatureSuite)
+        # 2. Build structured output chain
+        prompt = PromptTemplate.from_template(PROMPT)
+        self.chain = prompt | self.llm.with_structured_output(FeatureSuite)
 
     def generate_tests_for_instructions(
-            self,
-            coverage_plan: CoveragePlan,
-            step_patterns: str = "",
-            business_knowledge: str = ""
+        self,
+        coverage_plan: CoveragePlan,
+        step_patterns: str = "",
+        business_knowledge: str = ""
     ) -> FeatureSuite:
-        formatted_prompt = PROMPT.format(
-            requirement_section=coverage_plan.requirement_section,
-            coverage_plan=coverage_plan.model_dump_json(indent=2),
-            step_patterns=step_patterns,
-            business_knowledge=business_knowledge
+        """
+        Translates a CoveragePlan into a FeatureSuite using BaseAgent invocation.
+        """
+        response = self.invoke(
+            self.chain,
+            {
+                "requirement_section": coverage_plan.requirement_section,
+                "coverage_plan": coverage_plan.model_dump_json(indent=2),
+                "step_patterns": step_patterns,
+                "business_knowledge": business_knowledge,
+            }
         )
-        response = self.structured_llm.invoke(formatted_prompt)
+
         if isinstance(response, FeatureSuite):
             return response
 
@@ -95,32 +96,3 @@ class TestGeneratorAgent:
             return FeatureSuite(**response)
 
         raise TypeError(f"Expected FeatureSuite instance, received: {type(response).__name__}")
-
-
-class SampleOpenAPIAgentService:
-    def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-    def generate_tests_for_instructions(self,
-            coverage_plan: CoveragePlan,
-            step_patterns: str = "",
-            business_knowledge: str = ""
-    ) -> FeatureSuite:
-        formatted_prompt = PROMPT.format(
-            requirement_section=coverage_plan.requirement_section,
-            coverage_plan_json=coverage_plan.model_dump_json(indent=2),
-            step_patterns=step_patterns,
-            business_knowledge=business_knowledge
-        )
-
-        response = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
-            temperature=0.0,  # Enforces maximum determinism
-            messages=[
-                {"role": "system", "content": formatted_prompt},
-                {"role": "user",
-                 "content": f"Generate structured test cases for these instructions:\n\n{coverage_plan.requirement_section}"}
-            ],
-            response_format=FeatureSuite
-        )
-        return response.choices[0].message.parsed
