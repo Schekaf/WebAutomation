@@ -1,21 +1,16 @@
-import os
-import re
 import json
-import gc
 from pathlib import Path
-from typing import List, Set, Dict, Optional
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import ChatOllama
+from typing import List, Set, Dict, Optional, Any
 
-from ai_agents.core.config import get_agent_model
-from ai_agents.core.lessons_learned_manager import LessonsLearnedManager
+from langchain_core.output_parsers import JsonOutputParser
+
+from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.step_library import PatternRegistry
 from ai_agents.core.utils import timer, rest_check
 
 FEASIBILITY_PROMPT = """You are a QA Test Automation Architect reviewing BDD Scenarios for Web Automation suitability.
 
-LESSONSLEARNED CONTEXT FOR YOU:
+LESSONS LEARNED (PAST FAILURE MODES TO AVOID):
 {lessons_learned}
 
 Determine if the following BDD Scenario can be automated using standard Web Browser Automation (Selenium/Playwright in Python).
@@ -53,6 +48,9 @@ RE_MATCH_PROMPT = """You are a QA Test Automation Architect.
 
 A step pattern match was flagged as invalid by an auditor. Find a better matching pattern from the known valid Drain patterns for this single step.
 
+LESSONS LEARNED (PAST FAILURE MODES TO AVOID):
+{lessons_learned}
+
 Step Text: "{step_text}"
 Flawed Previous Pattern: "{old_pattern}"
 
@@ -83,41 +81,41 @@ Return JSON ONLY matching this format:
 """
 
 
-class AutomationFeasibilityAgent:
+class AutomationFeasibilityAgent(BaseAgent):
     """
     Agent responsible for evaluating BDD feature files, determining if scenarios
     are suitable for web browser automation, and tagging automatable scenarios.
     """
 
-    def __init__(self, model_name: str | None = None, lessons_manager: LessonsLearnedManager | None = None):
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
-        self.lessons_manager = lessons_manager or LessonsLearnedManager()
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.0, format_json=True, timeout=40.0, **kwargs)
 
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=0.0,
-            timeout=40.0,
-            format="json"  # Guarantees structured JSON
+        # 2. Main feasibility evaluation chain
+        self.chain = self.create_chain(
+            FEASIBILITY_PROMPT,
+            output_parser=JsonOutputParser()
         )
-        prompt = PromptTemplate.from_template(FEASIBILITY_PROMPT)
-        self.chain = prompt | self.llm | StrOutputParser()
 
-        # Add the re-match chain
-        rematch_prompt = PromptTemplate.from_template(RE_MATCH_PROMPT)
-        self.rematch_chain = rematch_prompt | self.llm | StrOutputParser()
+        # 3. Step re-match evaluation chain
+        self.rematch_chain = self.create_chain(
+            RE_MATCH_PROMPT,
+            output_parser=JsonOutputParser()
+        )
 
     @timer
     @rest_check
-    def evaluate_scenario(self, scenario_text: str, automatable_patterns: Set[str]) -> Dict:
+    def evaluate_scenario(self, scenario_text: str, automatable_patterns: Set[str]) -> Dict[str, Any]:
         """Invokes LLM to judge feasibility of a single scenario."""
         try:
-            raw_res = self.chain.invoke({
-                "lessons_learned": self.lessons_manager.load_lessons(self.agent_name),
-                "scenario_text": scenario_text,
-                "drain_patterns": "\n".join(automatable_patterns)
-            })
-            return json.loads(raw_res)
+            # BaseAgent.invoke automatically handles lessons_learned injection
+            return self.invoke(
+                self.chain,
+                {
+                    "scenario_text": scenario_text,
+                    "drain_patterns": "\n".join(automatable_patterns)
+                }
+            )
         except Exception as e:
             # Fallback to True if JSON parsing or connection error occurs
             return {
@@ -126,18 +124,22 @@ class AutomationFeasibilityAgent:
                 "steps": []
             }
 
+    @rest_check
     def rematch_step(self, step_text: str, old_pattern: str, automatable_patterns: Set[str]) -> Dict[str, str]:
         """
         Re-evaluates a single mismatched step against the known Drain pattern set.
         Exposed so auditing pipelines/agents can trigger step-level rematching.
         """
         try:
-            raw_response = self.rematch_chain.invoke({
-                "step_text": step_text,
-                "old_pattern": old_pattern,
-                "drain_patterns": "\n".join(sorted(automatable_patterns))
-            })
-            return json.loads(raw_response)
+            # BaseAgent.invoke automatically handles lessons_learned injection
+            return self.invoke(
+                self.rematch_chain,
+                {
+                    "step_text": step_text,
+                    "old_pattern": old_pattern,
+                    "drain_patterns": "\n".join(sorted(automatable_patterns))
+                }
+            )
         except Exception as e:
             print(f"   ⚠️ Re-match fallback failed for step '{step_text}': {e}")
             return {
@@ -146,7 +148,7 @@ class AutomationFeasibilityAgent:
             }
 
     @staticmethod
-    def _write_feedback_file(feature_path: str, evaluation_results: List[Dict]) -> Path:
+    def _write_feedback_file(feature_path: str, evaluation_results: List[Dict[str, Any]]) -> Path:
         """
         Generates <feature_name>_feasibility_feedback.json in the same directory as the feature file.
         Returns the Path object of the generated file.
@@ -169,6 +171,7 @@ class AutomationFeasibilityAgent:
         return feedback_json_path
 
     @timer
+    @rest_check
     def process_feature_file(self, feature_path: str, registry: PatternRegistry) -> Optional[Path]:
         """
         Parses a feature file, evaluates scenarios against active Drain patterns,
