@@ -1,64 +1,51 @@
-from typing import Set, List, Dict, Any
+from typing import Dict, Any, Set
+from ai_agents.core.base_agent import BaseAgent
 
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import ChatOllama
+STEP_SKELETON_GENERATION_PROMPT = """You are an Expert BDD Architect specializing in Python Behave and Step Skeleton Design.
 
-from ai_agents.core.config import get_agent_model
-from ai_agents.core.utils import mine_patterns_with_drain
+Look at these raw BDD steps alongside the templates extracted by Drain3.
 
-PROMPT = """Look at these raw BDD steps from a feature file alongside the templates extracted by Drain3.
-
-    
 Drain Templates:
 {drain_patterns}
 
+LESSONS LEARNED (STRICT RULES TO AVOID PAST FAILURE MODES):
+{lessons_learned}
+
 TASK:
-Generate the most meaningful, reusable step pattern strings for Python Behave definitions.
-- Abstract dynamic values into descriptive parameters like {{button_name}}, {{location}}, {{state}}.
-- A step implementation can have max 3 parameters. If a step has more than 3 dynamic values, combine them into a 
-single descriptive parameter.
+Generate the most meaningful, reusable step pattern strings and skeleton signatures for Python Behave definitions.
 
-- Optimum step patterns have mostly 2 parameters {{action}} --> could be text, option, ..
-and {{element}} --> could be button, field, link, dropdown, checkbox, radio button, tab, menu item, icon, image, label, section, card, modal, popup, tooltip, etc.
-EXAMPLE:
--> I select "{{option}}" as {{element}}
--> I click on {{element}} with text "{{text}}"
+RULES FOR PATTERNS & PARAMETERS:
+- Abstract dynamic values into descriptive parameters like {{element}}, {{text}}, {{option}}, {{state}}, {{location}}, {{value}}.
+- MAXIMUM 3 parameters per step pattern.
+- If 1 parameter: Prefer {{element}} (e.g., `I click on {{element}}`).
+- If 2 parameters: Prefer {{action_value}} and {{element}} (e.g., `I select "{{option}}" as {{element}}`).
+- If 3 parameters: At least one parameter MUST be {{element}}.
 
-- If a step has to have 1 parameter only, prefer {{element}}
-EXAMPLE:
--> I click on {{element}}
--> I press on {{key}} Key
+STRICT CODE OUTPUT FORMAT RULES:
+1. NO DUPLICATE FUNCTION NAMES. Every function name MUST be unique and derived from the step text in snake_case (e.g., `def step_input_value_into_element(context, value, element):`). NEVER output `def step_impl`.
+2. SINGLE DECORATOR PER FUNCTION. Do NOT stack multiple `@given` / `@when` / `@then` decorators on top of a single `step_impl` function.
+3. QUOTE ESCAPING: Use single quotes `'` for decorators. If a parameter string inside contains single quotes, double-quote the decorator string or escape it properly (e.g., `@given('I enter "{value}" as {element}')`).
+4. Output ONLY the clean Python skeleton code without markdown blocks or explanations.
 
-- I a step has to have 3 parameters, at least one of the params has to be {{element}}, the other to can be {{text}}, {{option}}, {{state}}, {{location}}, {{value}}, etc. 
-- Output ONLY the pattern strings, ONE PER LINE.
-- Do NOT output code blocks, @step decorators, or explanations.
+Output ONE step definition skeleton per pattern.
 """
 
 
-class StepSkeletonGeneratorAgent:
+class StepSkeletonGeneratorAgent(BaseAgent):
     """
     Phase 3 Agent: Generates Python step signatures (skeletons with `pass`)
     from step patterns, leaving implementation logic completely empty.
     """
 
-    def __init__(self, model_name: str | None = None):
-        # 1. Resolve agent name and lookup default model from central config
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.0, timeout=60.0, **kwargs)
 
-        # 2. Memory pool to avoid generating duplicate patterns across features in a single run
+        # 2. Cross-feature memory pool
         self.generated_patterns_memory: Set[str] = set()
 
-        # 3. LLM Setup
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=0.0,
-            timeout=60.0
-        )
-
-        prompt = PromptTemplate.from_template(PROMPT)
-        self.chain = prompt | self.llm | StrOutputParser()
+        # 3. Create chain via BaseAgent helper
+        self.chain = self.create_chain(STEP_SKELETON_GENERATION_PROMPT)
 
     def generate_skeletons(self, drain_patterns: set, raw_steps: list[str]) -> list[str]:
         if not raw_steps:
@@ -71,10 +58,10 @@ class StepSkeletonGeneratorAgent:
             return []
 
         # 3. Invoke LLM only for new patterns
-        raw_output = self.chain.invoke({
-            # "raw_steps": "\n".join(raw_steps),
-            "drain_patterns": "\n".join(unseen_patterns)
-        })
+        raw_output = self.invoke(
+            self.chain,
+            {"drain_patterns": "\n".join(unseen_patterns)}
+        )
 
         # 4. Save to cross-feature memory
         self.generated_patterns_memory.update(unseen_patterns)
