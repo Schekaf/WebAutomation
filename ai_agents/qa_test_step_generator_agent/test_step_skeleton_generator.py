@@ -24,7 +24,7 @@ RULES FOR PATTERNS & PARAMETERS:
 STRICT CODE OUTPUT FORMAT RULES:
 1. NO DUPLICATE FUNCTION NAMES. Every function name MUST be unique and derived from the step text in snake_case (e.g., `def step_input_value_into_element(context, value, element):`). NEVER output `def step_impl`.
 2. SINGLE DECORATOR PER FUNCTION. Do NOT stack multiple `@given` / `@when` / `@then` decorators on top of a single `step_impl` function.
-3. QUOTE ESCAPING: Use single quotes `'` for decorators. If a parameter string inside contains single quotes, double-quote the decorator string or escape it properly (e.g., `@given('I enter "{value}" as {element}')`).
+3. QUOTE ESCAPING: Use single quotes `'` for decorators. If a parameter string inside contains single quotes, double-quote the decorator string or escape it properly (e.g., `@given('I enter "{{value}}" as {{element}}')`).
 4. Output ONLY the clean Python skeleton code without markdown blocks or explanations.
 
 Output ONE step definition skeleton per pattern.
