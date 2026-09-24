@@ -1,6 +1,6 @@
 from typing import Optional, Any, Dict
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, BaseOutputParser
 from langchain_ollama import ChatOllama
 from ai_agents.core.config import get_agent_model
 from ai_agents.core.lessons_learned_manager import LessonsLearnedManager
@@ -19,6 +19,7 @@ class BaseAgent:
         temperature: float = 0.0,
         format_json: bool = False,
         timeout: float = 60.0,
+        keep_alive: Optional[str] = None
     ):
         self.agent_name = self.__class__.__name__
         self.model_name = model_name or get_agent_model(self.agent_name)
@@ -31,17 +32,18 @@ class BaseAgent:
             temperature=temperature,
             timeout=timeout,
             format=format_setting,
+            keep_alive=keep_alive
         )
 
-    def create_chain(self, prompt_template_str: str) -> Any:
+    def create_chain(self, prompt_template_str: str, output_parser: BaseOutputParser = StrOutputParser()) -> Any:
         """
         Helper method to compile a standard LangChain pipeline:
         PromptTemplate -> LLM -> StrOutputParser.
         """
         prompt = PromptTemplate.from_template(prompt_template_str)
-        return prompt | self.llm | StrOutputParser()
+        return prompt | self.llm | output_parser
 
-    def invoke(self, chain: Any, input_data: Dict[str, Any]) -> str:
+    def invoke(self, chain: Any, input_data: Dict[str, Any]) -> Any:
         """
         Standard invocation method that automatically injects lessons learned
         context if not explicitly provided in input_data.
