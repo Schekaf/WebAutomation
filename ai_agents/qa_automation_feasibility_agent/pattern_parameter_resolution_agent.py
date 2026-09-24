@@ -1,16 +1,15 @@
 import json
 from pathlib import Path
-from typing import Dict, Set
-from langchain_core.prompts import PromptTemplate
-from ai_agents.core.lessons_learned_manager import LessonsLearnedManager
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_ollama import ChatOllama
+from typing import Dict, Set, Any
 
-from ai_agents.core.config import get_agent_model
+from langchain_core.output_parsers import JsonOutputParser
+
+from ai_agents.core.base_agent import BaseAgent
+from ai_agents.core.utils import rest_check
 
 PROMPT = """You are a test automation step pattern formatter.
 
-LESSONSLEARNED CONTEXT FOR YOU:
+LESSONS LEARNED (PAST FAILURE MODES TO AVOID):
 {lessons_learned}
 
 Task:
@@ -34,33 +33,38 @@ Return a JSON object mapping the original pattern to its resolved version:
 """
 
 
-class PatternResolutionAgent:
+class PatternResolutionAgent(BaseAgent):
     """Agent that resolves generic step patterns into typed parameter schemas."""
 
-    def __init__(self, model_name: str | None = None):
-        self.agent_name = self.__class__.__name__
-        self.model_name = model_name or get_agent_model(self.agent_name)
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=0.0,
-            repeat_penalty=1.2
-        )
-        self.lessons_manager = LessonsLearnedManager()
+    def __init__(self, **kwargs):
+        # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
+        super().__init__(temperature=0.0, format_json=True, **kwargs)
+
+        # 2. Interactive HITL flag initialization
         self.interactive_mode = None
 
-        prompt = PromptTemplate.from_template(PROMPT)
-        self.chain = prompt | self.llm.bind(format="json") | JsonOutputParser()
+        # 3. Create chain using BaseAgent helper with JsonOutputParser
+        self.chain = self.create_chain(
+            PROMPT,
+            output_parser=JsonOutputParser()
+        )
 
     def resolve_patterns(self, raw_patterns: Set[str]) -> Dict[str, str]:
         """Takes raw patterns from collect_all_used_patterns and returns a mapping to typed patterns."""
         if not raw_patterns:
             return {}
 
-        return self.chain.invoke({"lessons_learned": self.lessons_manager.load_lessons(self.agent_name), "patterns": list(raw_patterns)})
+        # BaseAgent.invoke automatically handles lessons_learned injection
+        return self.invoke(
+            self.chain,
+            {
+                "patterns": list(raw_patterns)
+            }
+        )
 
+    @rest_check
     def process_feedback_file(self, feedback_path: str) -> bool:
         """Processes a single feedback JSON file, resolves any generic `<*>` step patterns,
-
         and updates the JSON file in-place with 'resolved_pattern'.
         """
         file_path = Path(feedback_path)
@@ -69,7 +73,7 @@ class PatternResolutionAgent:
             return False
 
         with open(file_path, "r", encoding="utf-8") as f:
-            feedback_data = json.load(f)
+            feedback_data: Dict[str, Any] = json.load(f)
 
         # 1. Collect unique matched patterns within this feedback file
         file_patterns: Set[str] = set()
@@ -87,10 +91,12 @@ class PatternResolutionAgent:
         schema_map = self.resolve_patterns(file_patterns)
         if not schema_map:
             return False
+
         if self.interactive_mode is None:
             choice = input(
-                "\nDo you want to enable Human-In-The-Loop review for pattern resolutions? (y/n): ").strip().lower()
-            self.interactive_mode = (choice == 'y')
+                "\nDo you want to enable Human-In-The-Loop review for pattern resolutions? (y/n): "
+            ).strip().lower()
+            self.interactive_mode = (choice == "y")
             if self.interactive_mode:
                 print("Interactive mode ENABLED. You will review each proposed resolution.")
             else:
@@ -105,20 +111,19 @@ class PatternResolutionAgent:
 
             user_input = input("\nIs this pattern resolution correct? (y/n): ").strip().lower()
 
-            if user_input != 'y':
+            if user_input != "y":
                 print("❌ Resolution rejected by user.")
 
-                # Capture feedback for LessonsLearnedManager
-                if self.lessons_manager:
-                    user_correction = input("Provide the correct expected format or rule derived: ").strip()
-                    self.lessons_manager.add_lesson(
-                        agent_id=self.agent_name,
-                        category="pattern_resolution_mismatch",
-                        original_output=f"{raw} -> {resolved}",
-                        corrected_output=user_correction,
-                        root_cause="LLM parameter resolution rejected by user review",
-                        rule_derived=user_correction or "Strictly adhere to explicit parameter typing rules."
-                    )
+                # Capture feedback for LessonsLearnedManager inherited from BaseAgent
+                user_correction = input("Provide the correct expected format or rule derived: ").strip()
+                self.lessons_manager.add_lesson(
+                    agent_id=self.agent_name,
+                    category="pattern_resolution_mismatch",
+                    original_output=f"{raw} -> {resolved}",
+                    corrected_output=user_correction,
+                    root_cause="LLM parameter resolution rejected by user review",
+                    rule_derived=user_correction or "Strictly adhere to explicit parameter typing rules."
+                )
                 print("📝 Lesson added to LessonsLearnedManager.")
 
         # 3. Decorate each step with 'resolved_pattern'
@@ -133,7 +138,7 @@ class PatternResolutionAgent:
         # 4. Save updated feedback payload back to disk
         if updated:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(feedback_data, f, indent=2)
+                json.dump(feedback_data, f, indent=2, ensure_ascii=False)
             print(f"✅ Updated resolved patterns in {file_path.name}")
 
         return updated
