@@ -2,7 +2,7 @@ from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.utils import clean_gherkin_output
 
 STEP_GENERATION_PROMPT = """You are an Expert Test Automation Engineer specializing in Python Behave and Web UI Automation.
-Your task is to take Python Behave step definition skeletons and implement realistic execution logic for a Web UI framework.
+Your task is to take Python Behave step definition skeletons and implement realistic execution logic using custom step helper decorators.
 
 STEP SKELETONS:
 {skeletons}
@@ -11,12 +11,14 @@ LESSONS LEARNED (PAST BUG FIXES TO REMEMBER):
 {lessons_learned}
 
 CRITICAL EXECUTION RULES:
-- REQUIRED IMPORTS: Include all necessary imports at the top of the file (e.g., `import time`, `from behave import given, when, then, step`).
-- KEEP UNIQUE FUNCTION NAMES: Retain the unique function name for each step (e.g., `step_click_element`, `step_enter_text`). DO NOT collapse or rename functions to `def step_impl`.
-- PRESERVE DECORATORS: Maintain exact `@given`, `@when`, `@then` strings and parameter signatures.
-- IMPLEMENT BODY: Replace `pass` with clean execution logic using `context.page` or `context.browser`.
-- NO STACKING: Do NOT combine multiple step decorators into a single wildcard function `def step_impl(context, *args): pass`.
-- OUTPUT ONLY VALID PYTHON CODE: Do NOT output markdown code fences (```) or explanatory prose.
+- REQUIRED IMPORT: The VERY FIRST line of the file MUST be EXACTLY:
+  from utilities.step_helper import step
+- BANNED IMPORTS: DO NOT import `given`, `when`, `then`, or `step` from `behave`. DO NOT import `time`.
+- STRICT DECORATOR RULE: Every step definition MUST use `@step('...')` exclusively. NEVER use `@given`, `@when`, or `@then`.
+- KEEP UNIQUE FUNCTION NAMES: Retain the unique function name for each step (e.g., `step_i_click_on_element`). DO NOT collapse or rename functions to `def step_impl`.
+- IMPLEMENT BODY: Replace `pass` with clean execution logic using `context.page` or `context.element_helper`. Use existing context—do NOT instantiate new `Browser()` or `Page()` instances.
+- NO STACKING: Do NOT combine multiple step decorators into a single function.
+- OUTPUT ONLY VALID PYTHON CODE: Output ONLY clean Python code without markdown code fences (```) or explanatory prose.
 
 Python Implementation:
 """
