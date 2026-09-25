@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from ollama import ResponseError
 
+from ai_agents.core.schemas import FeatureSuite
 # Core Agents
 from ai_agents.qa_coverage_planner_agent.test_coverage_planner_agent import CoveragePlannerAgent
 from ai_agents.qa_test_generator_agent.test_generator import TestGeneratorAgent
@@ -56,7 +57,7 @@ def main():
             print("  ↳ Phase 0: Planning test scenario coverage matrix...")
             coverage_plan = coverage_planner.plan_coverage(
                 requirement_text=section,
-                section_name=first_line
+                requirement_section=first_line
             )
             print(f"    Planned {coverage_plan.total_scenarios_planned} test scenario(s).")
 
@@ -64,10 +65,35 @@ def main():
             # PHASE 1: Generate Schema-Validated Gherkin FeatureSuite
             # -----------------------------------------------------------------
             print("  ↳ Phase 1: Synthesizing Gherkin feature suite...")
-            feature_suite = test_generator.generate_tests_for_instructions(
-                coverage_plan=coverage_plan,
-                step_patterns=get_escaped_step_patterns(),
-                business_knowledge=TRADEHUB_BUSINESS_KNOWLEDGE
+
+            BATCH_SIZE = 6  # Small batch size to avoid output token limits
+            all_scenarios = []
+            feature_title = ""
+
+            planned_scenarios = coverage_plan.scenarios
+            total_scenarios = len(planned_scenarios)
+
+            for i in range(0, total_scenarios, BATCH_SIZE):
+                batch = planned_scenarios[i: i + BATCH_SIZE]
+
+                # Create a temporary plan for this sub-batch
+                batch_plan = coverage_plan.model_copy(update={"scenarios": batch})
+
+                batch_suite = test_generator.generate_tests_for_instructions(
+                    coverage_plan=batch_plan,
+                    step_patterns=get_escaped_step_patterns(),
+                    business_knowledge=TRADEHUB_BUSINESS_KNOWLEDGE
+                )
+
+                if not feature_title and hasattr(batch_suite, "feature_title"):
+                    feature_title = batch_suite.feature_title
+
+                all_scenarios.extend(batch_suite.scenarios)
+
+            # Build the complete merged suite
+            feature_suite = FeatureSuite(
+                feature_title=feature_title or first_line,
+                scenarios=all_scenarios
             )
 
         except ResponseError as e:
