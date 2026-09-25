@@ -41,8 +41,8 @@ def rest_check(func):
             )
             temp = int(output.strip().split("\n")[0])
 
-            if temp >= 80:
-                print(f"\n🔥 [Thermal Guard] GPU temp high: 80°C! Pausing agent for 60 seconds...")
+            if temp >= 75:
+                print(f"\n🔥 [Thermal Guard] GPU temp high: 75°C! Pausing agent for 60 seconds...")
                 time.sleep(60)
                 print("❄️ Resuming execution.")
         except Exception as e:
