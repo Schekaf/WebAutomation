@@ -185,10 +185,15 @@ behave features/practice_tests.feature -t Register -k -D browser=chrome
 
 ---
 
-## 📜 License
+## 📜 Licensing & Commercial Use
 
-This project is licensed under the **GNU General Public License v3.0** (GPLv3).
+This project is dual-licensed:
+
+1. **Open Source Use (GNU GPLv3):** Free for open-source projects, individuals, and education under the terms of the GNU General Public License v3.0.
+2. **Commercial / Proprietary Use:** If you wish to use this framework in closed-source commercial applications without being bound by GPLv3 copyleft terms, a commercial license is required.
+
+For full license terms, see the [LICENSE](LICENSE) file.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-See the [LICENSE](LICENSE) file for the full license text.
+For commercial licensing inquiries, contact: `furkan.kiziltepe@gmail.com`
