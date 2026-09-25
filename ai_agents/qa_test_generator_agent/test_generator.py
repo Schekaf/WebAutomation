@@ -3,6 +3,7 @@ from langchain_core.prompts import PromptTemplate
 
 from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.schemas import FeatureSuite, CoveragePlan
+from ai_agents.core.utils import rest_check
 
 load_dotenv()
 
@@ -70,6 +71,7 @@ class TestGeneratorAgent(BaseAgent):
         prompt = PromptTemplate.from_template(PROMPT)
         self.chain = prompt | self.llm.with_structured_output(FeatureSuite)
 
+    @rest_check
     def generate_tests_for_instructions(
         self,
         coverage_plan: CoveragePlan,
