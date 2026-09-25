@@ -17,6 +17,8 @@ class BaseAgent:
         model_name: Optional[str] = None,
         lessons_manager: Optional[LessonsLearnedManager] = None,
         temperature: float = 0.0,
+        num_ctx: int = 8192,
+        num_predict: int = 4096,
         format_json: bool = False,
         timeout: float = 60.0,
         keep_alive: Optional[str] = None
@@ -30,6 +32,8 @@ class BaseAgent:
         self.llm = ChatOllama(
             model=self.model_name,
             temperature=temperature,
+            num_ctx=num_ctx,
+            num_predict=num_predict,
             timeout=timeout,
             format=format_setting,
             keep_alive=keep_alive
