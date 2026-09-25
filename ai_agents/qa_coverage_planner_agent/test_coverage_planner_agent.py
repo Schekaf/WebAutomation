@@ -2,25 +2,33 @@ from langchain_core.prompts import PromptTemplate
 
 from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.schemas import CoveragePlan
+from ai_agents.core.utils import rest_check
 
-PLANNER_PROMPT = """You are a Lead Test Architect specializing in Test Scenario Planning and Coverage.
+PLANNER_PROMPT = """You are a Lead Test Architect specializing in Test Scenario Planning and Functional Coverage Analysis.
 
 YOUR TASK:
-Analyze the following business requirement text and determine ALL necessary test scenarios required to achieve 100% functional test coverage.
+Analyze the provided business requirement text and construct a complete, high-density test coverage plan that achieves 100% functional, operational, and edge-case coverage.
 
-REQUIREMENT TEXT ({section_name}):
+REQUIREMENT SECTION:
+{requirement_section}
+
+REQUIREMENT TEXT:
 {requirement_text}
 
 LESSONS LEARNED (PAST FAILURE MODES TO AVOID):
 {lessons_learned}
 
-INSTRUCTIONS:
-1. Identify all explicit rules, acceptance criteria, and implicit edge cases.
-2. Generate scenarios covering:
-   - HAPPY_PATH: Standard successful flows.
-   - NEGATIVE: Invalid inputs, insufficient permissions, rejected transactions.
-   - BOUNDARY_EDGE_CASE: Limit caps, zero/negative quantities, threshold boundaries.
-3. Output strictly valid JSON matching the specified schema.
+COVERAGE SCOPE & CATEGORIES:
+1. HAPPY_PATH: Core business flows, multi-step end-to-end user journeys, and valid default states.
+2. NEGATIVE: Unauthorized access, invalid payload inputs, rejected transactions, business logic violations, and exception handlings.
+3. BOUNDARY_EDGE_CASE: Numerical thresholds ($0$, negative numbers, max integer caps), empty/null string inputs, character limits, rate limits, state transition conflicts, and concurrent operations.
+
+STRICT GENERATION RULES:
+1. EXHAUSTIVE SPECIFICATION COVERAGE: Every explicit rule, business constraint, and acceptance criterion in the text MUST map to at least one test scenario.
+2. FIELD LENGTH LIMITS (CRITICAL):
+   - "title": Maximum 8 words. Direct, action-oriented, and specific.
+   - "objective": Exactly 1 concise sentence (max 18 words). State precisely what condition is verified and the expected result.
+3. NO HALTING OR OMISSION: Do not summarize or combine distinct scenarios. Generate explicit, discrete scenarios for each distinct logic path.
 """
 
 
@@ -38,7 +46,8 @@ class CoveragePlannerAgent(BaseAgent):
         prompt = PromptTemplate.from_template(PLANNER_PROMPT)
         self.chain = prompt | self.llm.with_structured_output(CoveragePlan)
 
-    def plan_coverage(self, requirement_text: str, section_name: str = "Requirement Section") -> CoveragePlan:
+    @rest_check
+    def plan_coverage(self, requirement_text: str, requirement_section: str = "Requirement Section") -> CoveragePlan:
         """
         Executes the scenario coverage planning chain for the provided requirement text.
         """
@@ -46,7 +55,7 @@ class CoveragePlannerAgent(BaseAgent):
         response = self.invoke(
             self.chain,
             {
-                "section_name": section_name,
+                "requirement_section": requirement_section,
                 "requirement_text": requirement_text,
             }
         )
