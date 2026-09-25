@@ -175,7 +175,6 @@ def run_code_generation_phase(output_ai_steps_file, model_name, feedback_directo
     output_ai_steps_file.parent.mkdir(parents=True, exist_ok=True)
     with open(output_ai_steps_file, "w", encoding="utf-8") as out_f:
         out_f.write(f"# Auto-generated step definitions by Phase 3 Pipeline ({model_name})\n")
-        out_f.write("from behave import step, given, when, then\n\n")
         out_f.write(cleaned_final_code + "\n")
 
     print("\n✨ Step generation pipeline completed successfully!")
