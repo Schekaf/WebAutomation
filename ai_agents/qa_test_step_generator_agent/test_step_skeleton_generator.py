@@ -14,6 +14,10 @@ LESSONS LEARNED (STRICT RULES TO AVOID PAST FAILURE MODES):
 TASK:
 Generate the most meaningful, reusable step pattern strings and skeleton signatures for Python Behave definitions.
 
+CRITICAL PATTERN ORDERING RULE (PREVENT STEP INTERCEPTION):
+- SORT ALL STEPS BY PATTERN LENGTH IN DESCENDING ORDER (LONGEST / MOST SPECIFIC PATTERNS FIRST).
+- Specific multi-parameter patterns (e.g., `@step('I see {{element}} is "{{state}}"')`) MUST appear BEFORE shorter/generic patterns (e.g., `@step('I see "{{element}}"')`). Otherwise, Behave's regex engine will intercept all execution using the shorter rule.
+
 RULES FOR PATTERNS & PARAMETERS:
 - Abstract dynamic values into descriptive parameters like {{element}}, {{text}}, {{option}}, {{state}}, {{location}}, {{value}}.
 - MAXIMUM 3 parameters per step pattern.
