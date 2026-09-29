@@ -19,8 +19,10 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable, Set, Tuple
 
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 
 from ai_agents.core.base_agent import BaseAgent
+from ai_agents.core.schemas import PatternAuditResponse
 from ai_agents.core.step_library import PatternRegistry
 from ai_agents.core.utils import timer, rest_check
 
@@ -72,39 +74,38 @@ class PatternAuditAgent(BaseAgent):
         # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
         super().__init__(
             temperature=0.0,
-            format_json=True,
             timeout=30.0,
             keep_alive="0s",  # Instantly release memory
             **kwargs
         )
 
-        # 2. Build audit evaluation chain using JsonOutputParser
-        self.chain = self.create_chain(
-            PATTERN_AUDIT_PROMPT,
-            output_parser=JsonOutputParser()
-        )
+        # 2. Build prompt template
+        prompt = PromptTemplate.from_template(PATTERN_AUDIT_PROMPT)
+
+        # 3. Bind Pydantic model directly to LLM with structured output
+        self.chain = prompt | self.llm.with_structured_output(PatternAuditResponse)
 
     @timer
     @rest_check
     # -------------------------------------------------------------------------
     # 1. LLM Evaluation Method
     # -------------------------------------------------------------------------
-    def audit_scenario_steps(self, steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def audit_scenario_steps(self, steps: List[Dict[str, Any]]) -> PatternAuditResponse:
         """Audits steps with the LLM and returns audit results (valid vs mismatch)."""
         if not steps:
-            return []
+            return PatternAuditResponse(has_mismatches=False, audit_results=[])
         try:
             # BaseAgent.invoke automatically handles lessons_learned injection
-            audit_out = self.invoke(
+            audit_out: PatternAuditResponse = self.invoke(
                 self.chain,
                 {
                     "scenario_payload": json.dumps(steps, indent=2, ensure_ascii=False)
                 }
             )
-            return audit_out.get("audit_results", [])
+            return audit_out
         except Exception as e:
             print(f"   ⚠️ Scenario audit error: {e}")
-            return []
+            return PatternAuditResponse(has_mismatches=False, audit_results=[])
 
     # -------------------------------------------------------------------------
     # 2. Granular Helper Functions
