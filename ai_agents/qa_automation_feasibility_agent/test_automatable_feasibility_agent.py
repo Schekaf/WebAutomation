@@ -195,12 +195,6 @@ class AutomationFeasibilityAgent(BaseAgent):
 
         Does NOT modify the feature file directly or perform step remediation.
         """
-        base_name = Path(feature_path).stem
-        feedback_json_path = Path(feature_path).parent / f"{base_name}_feasibility_feedback.json"
-        if "archive" in Path(feature_path).parts or feedback_json_path.exists():
-            print(f"⏩ [FeasibilityAgent] Skipping {base_name}: Feedback file already exists or path archived.")
-            return None
-
         with open(feature_path, "r", encoding="utf-8") as f:
             content = f.read()
 
