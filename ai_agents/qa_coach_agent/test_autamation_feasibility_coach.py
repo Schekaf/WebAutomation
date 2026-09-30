@@ -1,11 +1,24 @@
+# Web Automation Framework Empowered by Local AI Agents
+# Copyright (C) 2026  A. Furkan KIZILTEPE <furkan.kiziltepe@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from langchain_core.prompts import PromptTemplate
 from ai_agents.core.base_agent import BaseAgent
 from ai_agents.core.schemas import AutomationFeasibilityCoachResponse, FeasibilityTargetScope
-from ai_agents.core.utils import discover_all_feature_files
-
 AUTOMATION_FEASIBILITY_COACH_PROMPT = """You are the Supervisory Automation Feasibility Coach Agent responsible for QA pipeline integrity.
 
 FEATURE FILE + FEATURE CONTENT + FEASIBILITY REPORT:
