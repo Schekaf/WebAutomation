@@ -17,8 +17,14 @@
 # Static Model Assignments
 GENERAL = "qwen2.5:7b"
 CODER = "qwen2.5-coder:7b"
+DEEPSEEK = "deepseek-r1:8b"
+LLAMA = "llama3.2:3b"
 
 AGENT_MODEL_MAP = {
+    # Supervisory Coach Agents (General LLM for decision reasoning & JSON adherence)
+    "TestGenerationCoachAgent": GENERAL,
+    "AutomationFeasibilityCoachAgent": LLAMA,
+
     # Phase 0: Planning
     "RequirementsRouterAgent": GENERAL,
     "CoveragePlannerAgent": GENERAL,
