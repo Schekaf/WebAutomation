@@ -168,18 +168,19 @@ class PatternAuditAgent(BaseAgent):
             return None
 
         # 1. Audit steps via LLM
-        audit_results = self.audit_scenario_steps(steps)
-        audit_map = {item["step_text"]: item for item in audit_results if "step_text" in item}
+        audit_response = self.audit_scenario_steps(steps)
+        audit_map = {item.step_text: item.model_dump() for item in audit_response.audit_results}
 
         # 2. Iterate through steps for remediation & usage tracking
         for step_entry in steps:
             s_text = step_entry.get("step_text")
+            audit_info = audit_map.get(s_text)
 
             # Remediate if flagged as mismatch
             if s_text in audit_map and audit_map[s_text].get("status") == "mismatch":
                 self._remediate_step_mismatch(
                     step_entry=step_entry,
-                    audit_info=audit_map[s_text],
+                    audit_info=audit_info,
                     registry=registry,
                     rematch_fn=rematch_fn,
                     lessons_manager=lessons_manager
