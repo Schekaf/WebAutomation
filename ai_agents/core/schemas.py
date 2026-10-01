@@ -116,3 +116,16 @@ class AutomationFeasibilityCoachResponse(BaseModel):
     should_run_feasibility: bool = Field(description="True if at least one feature needs EVALUATE or RE_EVALUATE")
     target_scope: List[FeasibilityTargetScope] = Field(description="MUST contain an entry for EVERY feature where feedback_exists is false or re-evaluation is needed")
     should_harvest_patterns: bool = Field(default=True)
+
+
+class AuditCoachTargetScope(BaseModel):
+    feature_file_name: str
+    feedback_file_name: str
+    action: Literal["EXECUTE_AUDIT", "SKIP_AUDIT"]
+    unresolved_step_count: int = Field(default=0, description="Count of steps missing valid resolved_pattern")
+    reason: str = Field(description="Detailed explanation for why audit is required or skipped")
+
+
+class AuditCoachResponse(BaseModel):
+    target_scope: List[AuditCoachTargetScope]
+    should_run_audit: bool
