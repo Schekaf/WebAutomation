@@ -52,12 +52,12 @@ Return a JSON object mapping the original pattern to its resolved version:
 class PatternResolutionAgent(BaseAgent):
     """Agent that resolves generic step patterns into typed parameter schemas."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, interactive_mode=None, **kwargs):
         # 1. Delegate LLM, model, and lessons_manager setup to BaseAgent
         super().__init__(temperature=0.0, format_json=True, **kwargs)
 
         # 2. Interactive HITL flag initialization
-        self.interactive_mode = None
+        self.interactive_mode = interactive_mode
 
         # 3. Create chain using BaseAgent helper with JsonOutputParser
         self.chain = self.create_chain(
@@ -120,7 +120,7 @@ class PatternResolutionAgent(BaseAgent):
 
         print(f"\n🔍 [PatternResolutionAgent] Proposed resolutions for {file_path.name}:")
         for raw, resolved in schema_map.items():
-            if not self.interactive_mode:
+            if not self.interactive_mode == 'y':
                 continue
             print(f"   • Raw:      {raw}")
             print(f"     Resolved: {resolved}")
