@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
+import gc
 import sys
 from pathlib import Path
 
@@ -26,12 +27,14 @@ from ai_agents.core.step_library import get_escaped_step_patterns, PatternRegist
 from ai_agents.core.tradehub_domain import TRADEHUB_BUSINESS_KNOWLEDGE, TRADEHUB_RAW_INSTRUCTIONS
 from ai_agents.core.utils import sanitize_model_tag_for_filename, split_instructions_into_sections, \
     discover_all_feature_files, mine_patterns_with_drain
+from ai_agents.qa_automation_feasibility_agent.pattern_audit_agent import PatternAuditAgent
 from ai_agents.qa_automation_feasibility_agent.test_automatable_feasibility_agent import AutomationFeasibilityAgent
 from ai_agents.qa_coach_agent.test_autamation_feasibility_coach import AutomationFeasibilityCoachAgent
 from ai_agents.qa_coach_agent.test_generation_coach import TestGenerationCoachAgent
+from ai_agents.qa_coach_agent.test_step_audit_coach import AuditCoachAgent
 from ai_agents.qa_coverage_planner_agent.test_coverage_planner_agent import CoveragePlannerAgent
 from ai_agents.qa_test_generator_agent.test_generator import TestGeneratorAgent
-from generate_steps import collect_raw_steps
+from generate_steps import collect_raw_steps, run_resolution_and_fixer_phase
 
 
 def generate_tests(section: str, first_line: str, coverage_planner: CoveragePlannerAgent,
@@ -191,6 +194,39 @@ def main():
                 print(f"⏩ [Feasibility Coach] SKIP -> {feature_file.name} (Feedback intact)")
     else:
         print("⏩ [Feasibility Coach]: All feasibility feedback reports are valid and up to date.")
+
+    print("\n🔍 Phase 2.1: Harvesting known patterns from existing feedback JSON files...")
+    harvested_patterns = PatternRegistry.collect_all_used_patterns(feedback_dir="features")
+    pattern_registry = PatternRegistry(initial_patterns=harvested_patterns)
+    print(f"📋 PatternRegistry loaded with {len(pattern_registry.active_patterns)} unique active patterns.")
+
+    audit_coach = AuditCoachAgent(lessons_manager=lessons_manager)
+    audit_coach_response = audit_coach.evaluate_audit_execution()
+    audit_directives_map = {target.feature_file_name: target for target in audit_coach_response.target_scope}
+
+    if audit_coach_response.should_run_audit:
+        pattern_auditor = PatternAuditAgent()
+        feasibility_agent = AutomationFeasibilityAgent(lessons_manager=lessons_manager)
+        features_dir = Path("features")
+        root_feature_files = [f for f in features_dir.glob("*.feature") if f.is_file()]
+        for feature_file in root_feature_files:
+            directive = audit_directives_map.get(feature_file.name)
+            if directive and directive.action == "EXECUTE_AUDIT":
+                print(f"⚡ [Audit Coach] EXECUTE_AUDIT -> {feature_file.name} ({directive.reason})")
+                pattern_auditor.audit_and_remediate_feature(
+                    feature_path=str(feature_file),
+                    registry=pattern_registry,
+                    rematch_fn=feasibility_agent.rematch_step,
+                    lessons_manager=lessons_manager
+                )
+                run_resolution_and_fixer_phase([feature_file], lessons_manager=lessons_manager)
+            else:
+                print(f"⏩ [Audit Coach] SKIP_AUDIT -> {feature_file.name} (All resolved_patterns intact)")
+
+        del pattern_auditor, feasibility_agent
+        gc.collect()
+    else:
+        print("⏩ [Audit Coach]: All feedback files have complete, valid resolved_patterns.")
 
 
 if __name__ == "__main__":
