@@ -172,11 +172,11 @@ class PatternRegistry:
             print(f"⚠️ No feedback JSON files found in directory: {feedback_dir}")
             return set()
 
-        print(f"🔍 Found {len(feedback_files)} feedback file(s). Collecting unique step patterns...")
+        print(f"      Found {len(feedback_files)} feedback file(s). Collecting unique step patterns...")
 
         for json_file in feedback_files:
             file_patterns = cls.get_used_patterns_from_feedback_file(str(json_file))
             all_patterns.update(file_patterns)
 
-        print(f"📜 Successfully collected {len(all_patterns)} unique active patterns across all feedback files.")
+        print(f"    📜 Successfully collected {len(all_patterns)} unique active patterns across all feedback files.")
         return all_patterns
