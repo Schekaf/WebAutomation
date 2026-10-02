@@ -32,8 +32,12 @@ from ai_agents.qa_automation_feasibility_agent.test_automatable_feasibility_agen
 from ai_agents.qa_coach_agent.test_autamation_feasibility_coach import AutomationFeasibilityCoachAgent
 from ai_agents.qa_coach_agent.test_generation_coach import TestGenerationCoachAgent
 from ai_agents.qa_coach_agent.test_step_audit_coach import AuditCoachAgent
+from ai_agents.qa_coach_agent.test_step_implementation_generation_coach import StepImplementationGenerationCoachAgent
 from ai_agents.qa_coverage_planner_agent.test_coverage_planner_agent import CoveragePlannerAgent
 from ai_agents.qa_test_generator_agent.test_generator import TestGeneratorAgent
+from ai_agents.qa_test_step_generator_agent.test_step_generator import StepGeneratorAgent
+from ai_agents.qa_test_step_generator_agent.test_step_reviewer import StepReviewAgent
+from ai_agents.qa_test_step_generator_agent.test_step_skeleton_generator import StepSkeletonGeneratorAgent
 from generate_steps import collect_raw_steps, run_resolution_and_fixer_phase
 
 
@@ -227,6 +231,80 @@ def main():
         gc.collect()
     else:
         print("⏩ [Audit Coach]: All feedback files have complete, valid resolved_patterns.")
+
+    print("\n🔄 Phase 4: Evaluating Step Definition & Code Generation Pipeline...")
+
+    # 1. Collect undefined steps directly from the test suite
+    feature_steps_map, all_raw_steps = collect_raw_steps(feature_files)
+
+    # 1. Harvest latest undefined step patterns from pattern registry / dry-run
+    latest_patterns = False if len(all_raw_steps) == 0 else PatternRegistry.collect_all_used_patterns(
+        feedback_dir="features")
+
+    if not latest_patterns:
+        print("⏩ Phase 4 Skipped: No active step patterns found in feedback directory.")
+    else:
+        # 2. Extract existing step definitions from features/steps
+        existing_step_files = list(Path("features/steps").glob("*.py")) if Path("features/steps").exists() else []
+        existing_step_definitions = [step_file.read_text(encoding="utf-8") for step_file in existing_step_files]
+
+        # 3. Invoke Phase 4 Coach Gatekeeper
+        impl_coach = StepImplementationGenerationCoachAgent(lessons_manager=lessons_manager)
+        coach_response = impl_coach.evaluate_execution(
+            undefined_step_patterns=latest_patterns,
+            existing_step_definitions=existing_step_definitions
+        )
+        del impl_coach
+        gc.collect()
+
+        print(f"📋 [Phase 4 Coach Decision]: generator_required={coach_response.should_run_generator}")
+
+        # 4. Handle GENERATE Execution Path
+        if coach_response.should_run_generator:
+            # Filter patterns flagged strictly for GENERATE
+            unhandled_patterns = [
+                target.step_pattern
+                for target in coach_response.target_scope
+                if target.action == "GENERATE"
+            ]
+            unhandled_pattern_set = set(unhandled_patterns)
+
+            if unhandled_patterns:
+                print(
+                    f"⚙️ [Phase 4.1]: Generating step skeletons for {len(unhandled_patterns)} unhandled pattern(s)...")
+                skeleton_agent = StepSkeletonGeneratorAgent()
+                skeletons = skeleton_agent.generate_skeletons(unhandled_pattern_set, unhandled_patterns)
+                del skeleton_agent
+                gc.collect()
+
+                if skeletons:
+                    combined_skeletons = "\n\n".join(skeletons)
+
+                    print("⚙️️ [Phase 4.2]: Generating Python @step implementation code...")
+                    step_generator_agent = StepGeneratorAgent()
+                    draft_code = step_generator_agent.generate_missing_steps(combined_skeletons)
+                    del step_generator_agent
+                    gc.collect()
+
+                    print("🧹 [Phase 4.3]: Reviewing, sanitizing, and validating AST with Ruff...")
+                    step_reviewer_agent = StepReviewAgent()
+                    cleaned_final_code = step_reviewer_agent.review_and_fix(draft_code)
+                    del step_reviewer_agent
+                    gc.collect()
+
+                    # Write out final generated step file
+                    output_file = Path("features/steps/generated_by_ai_steps.py")
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    with open(output_file, "a" if output_file.exists() else "w", encoding="utf-8") as out_f:
+                        out_f.write("\n\n" + cleaned_final_code + "\n")
+
+                    print(f"✨ [Phase 4 Complete]: Generated step definitions appended to {output_file.resolve()}")
+            else:
+                print("⏩ [Phase 4 Coach]: Generator was flagged, but no specific patterns required GENERATE.")
+        else:
+            print(
+                "⏩ [Phase 4 Coach]: All step definitions are already implemented or skipped. No code generation "
+                "required.")
 
 
 if __name__ == "__main__":
