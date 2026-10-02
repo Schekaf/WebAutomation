@@ -113,7 +113,7 @@ def run_audit_phase(feature_files, lessons_manager, feedback_directory="features
 # -------------------------------------------------------------------------
 def run_resolution_and_fixer_phase(feature_files, lessons_manager):
     print("\n🔧 Phase 3.1: Harmonizing Gherkin step syntax for automatable scenarios...")
-    resolution_agent = PatternResolutionAgent()
+    resolution_agent = PatternResolutionAgent(interactive_mode='n')
     test_fixer_agent = TestFixerAgent()
 
     for feature_file in feature_files:
