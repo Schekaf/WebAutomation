@@ -44,20 +44,17 @@ from generate_steps import collect_raw_steps, run_resolution_and_fixer_phase
 def generate_tests(section: str, first_line: str, coverage_planner: CoveragePlannerAgent,
                    test_generator: TestGeneratorAgent) -> FeatureSuite:
     try:
-        # -----------------------------------------------------------------
-        # PHASE 0: Generate Structured Coverage Plan Matrix
-        # -----------------------------------------------------------------
-        print("  ↳ Phase 0: Planning test scenario coverage matrix...")
+        print("        🤖 [Coverage Planner Agent]: Planning test scenario coverage matrix...")
         coverage_plan = coverage_planner.plan_coverage(
             requirement_text=section,
             requirement_section=first_line
         )
-        print(f"    Planned {coverage_plan.total_scenarios_planned} test scenario(s).")
+        print(f"            Planned {coverage_plan.total_scenarios_planned} test scenario(s).")
 
         # -----------------------------------------------------------------
         # PHASE 1: Generate Schema-Validated Gherkin FeatureSuite
         # -----------------------------------------------------------------
-        print("  ↳ Phase 1: Synthesizing Gherkin feature suite...")
+        print("        🤖 [Test Generator Agent]: Synthesizing Gherkin feature suite...")
 
         BATCH_SIZE = 6  # Small batch size to avoid output token limits
         all_scenarios = []
@@ -99,7 +96,7 @@ def generate_tests(section: str, first_line: str, coverage_planner: CoveragePlan
 
 
 def main():
-    print("Initializing Agentic Test Automation Pipeline...")
+    print("🚀 Initializing Agentic Test Automation Pipeline...")
     parser = argparse.ArgumentParser(description="Batch QA Test Step Generator Pipeline")
     parser.add_argument("--skip-test-generation", action="store_true", help="Skip initial feasibility & pattern mining")
     args = parser.parse_args()
@@ -112,12 +109,11 @@ def main():
     # File naming tag reflecting the synthesis model
     model_slug = sanitize_model_tag_for_filename(test_generator.model_name)
 
-    # Step 1: Split raw instructions into distinct sections
     sections = split_instructions_into_sections(TRADEHUB_RAW_INSTRUCTIONS)
-    print(f"Found {len(sections)} distinct section(s) to process...\n")
-
+    print(f"📄 Found {len(sections)} distinct section(s) to process...")
     if not args.skip_test_generation:
-        print("\n🤖 [TestGenerationCoachAgent] Evaluating requirements sections vs existing root feature files...")
+        print("🔄 Phase 0: Planning Test Generation Pipeline...")
+        print("    🤖 [Test Generation Coach Agent]: Evaluating requirements sections vs existing root feature files...")
         coach_response = test_gen_coach.evaluate_execution(
             requirements_doc=TRADEHUB_RAW_INSTRUCTIONS,
             existing_features_summary=test_gen_coach.get_section_summary(sections, model_slug=model_slug)
@@ -133,11 +129,11 @@ def main():
 
             # Fallback guard: skip if file exists and no explicit re-generation is requested
             if not directive or directive.action == "SKIP":
-                print(f"⏩ [Coach Directive] SKIP [{index}/{len(sections)}]: {first_line}")
+                print(f"    ⏩ [Coach Directive] SKIP [{index}/{len(sections)}]: {first_line}")
                 continue
 
-            print(f"\n🎯 [Coach Directive] {directive.action} [{index}/{len(sections)}]: {first_line}")
-            print(f"   Reason: {directive.reason}")
+            print(f"    🎯 [Coach Directive]: {directive.action} [{index}/{len(sections)}]: {first_line}")
+            print(f"    📋 Reason: {directive.reason}")
 
             # Trigger Coverage Planner & Test Generator ONLY for this specific section
             feature_suite = generate_tests(
@@ -159,31 +155,30 @@ def main():
                         f.write(f"    {step.keyword} {step.statement}\n")
                     f.write("\n")
 
-            print(f"  ✔ Saved: {directive.feature_file_name}")
+            print(f"        ✅ Generated: {directive.feature_file_name}\n")
+    else:
+        print("⏩ Phase 0: (Skipped by User) Test Generation Coach directives ignored.")
 
+    print("🔄 Phase 1: Automation Feasibility & Pattern Mining Pipeline...")
     feasibility_coach = AutomationFeasibilityCoachAgent()
     feasibility_agent = AutomationFeasibilityAgent()
 
     lessons_manager = LessonsLearnedManager()
     project_root = Path(__file__).resolve().parent
     features_dir = project_root / "features"
-    steps_dir = features_dir / "steps"
-    output_ai_steps_file = steps_dir / "generated_by_ai_steps.py"
-
     feature_files = discover_all_feature_files(str(features_dir), model_slug=model_slug)
 
     # 2. Evaluate scope via AutomationFeasibilityCoachAgent
-    print("🤖 [Feasibility Coach] Evaluating feature feasibility status...")
-
+    print("    🤖 [Feasibility Coach]: Evaluating feature feasibility status...")
     feasibility_coach_response = feasibility_coach.evaluate_execution()
 
     # 3. Run FeasibilityAgent ONLY for target files marked EVALUATE / RE_EVALUATE
     directives_map = {target.feature_file_name: target for target in feasibility_coach_response.target_scope}
 
     if feasibility_coach_response.should_run_feasibility:
-        print("\n🔍 Phase 1.1: Collecting initial undefined steps...")
+        print("    🔍 Phase 1.1: Collecting initial undefined steps...")
         feature_steps_map, all_raw_steps = collect_raw_steps(feature_files)
-        print("\n🦴 Phase 1.2: Mining Drain3 patterns and evaluating feasibility...")
+        print("    🔍 Phase 1.2: Mining Drain3 patterns and evaluating feasibility...")
         drain_patterns = mine_patterns_with_drain(all_raw_steps)
         automatable_patterns = {p for p in drain_patterns if "<*>" in p}
         registry = PatternRegistry(initial_patterns=automatable_patterns)
@@ -192,18 +187,21 @@ def main():
         for feature_file in root_feature_files:
             directive = directives_map.get(feature_file.name)
             if directive and directive.action in ["EVALUATE", "RE_EVALUATE"]:
-                print(f"🎯 [Feasibility Coach] {directive.action} -> {feature_file.name}")
+                print(f"    🎯 [Coach Directive]: {directive.action} -> {feature_file.name}")
+                print(f"    📋 Reason: {directive.reason}")
+                print(f"    🤖 [Feasibility Agent]: Generating feasibility report for {feature_file.name}...")
                 feasibility_agent.process_feature_file(str(feature_file), registry)
             else:
-                print(f"⏩ [Feasibility Coach] SKIP -> {feature_file.name} (Feedback intact)")
+                print(f"    ⏩ [Coach Directive] SKIP -> {feature_file.name} (Feedback intact)")
     else:
-        print("⏩ [Feasibility Coach]: All feasibility feedback reports are valid and up to date.")
+        print("    ⏩ [Feasibility Coach]: All feasibility feedback reports are valid and up to date.")
 
-    print("\n🔍 Phase 2.1: Harvesting known patterns from existing feedback JSON files...")
+    print("🔄 Phase 2: Audit Pipeline...")
+    print("    🔍 Phase 2.1: Harvesting known patterns from existing feedback JSON files...")
     harvested_patterns = PatternRegistry.collect_all_used_patterns(feedback_dir="features")
     pattern_registry = PatternRegistry(initial_patterns=harvested_patterns)
-    print(f"📋 PatternRegistry loaded with {len(pattern_registry.active_patterns)} unique active patterns.")
-
+    print(f"    📋 PatternRegistry loaded with {len(pattern_registry.active_patterns)} unique active patterns.")
+    print("    🤖 [Audit Coach]: Evaluating audit execution scope...")
     audit_coach = AuditCoachAgent(lessons_manager=lessons_manager)
     audit_coach_response = audit_coach.evaluate_audit_execution()
     audit_directives_map = {target.feature_file_name: target for target in audit_coach_response.target_scope}
@@ -216,7 +214,8 @@ def main():
         for feature_file in root_feature_files:
             directive = audit_directives_map.get(feature_file.name)
             if directive and directive.action == "EXECUTE_AUDIT":
-                print(f"⚡ [Audit Coach] EXECUTE_AUDIT -> {feature_file.name} ({directive.reason})")
+                print(f"    🎯 [Coach Directive]: EXECUTE_AUDIT -> {feature_file.name}")
+                print(f"    📋 Reason: {directive.reason}")
                 pattern_auditor.audit_and_remediate_feature(
                     feature_path=str(feature_file),
                     registry=pattern_registry,
@@ -225,14 +224,14 @@ def main():
                 )
                 run_resolution_and_fixer_phase([feature_file], lessons_manager=lessons_manager)
             else:
-                print(f"⏩ [Audit Coach] SKIP_AUDIT -> {feature_file.name} (All resolved_patterns intact)")
+                print(f"    ⏩ [Coach Directive]: SKIP_AUDIT -> {feature_file.name} (All resolved_patterns intact)")
 
         del pattern_auditor, feasibility_agent
         gc.collect()
     else:
-        print("⏩ [Audit Coach]: All feedback files have complete, valid resolved_patterns.")
+        print("    ⏩ [Audit Coach]: All feedback files have complete, valid resolved_patterns.")
 
-    print("\n🔄 Phase 4: Evaluating Step Definition & Code Generation Pipeline...")
+    print("🔄 Phase 3: Evaluating Step Definition & Code Generation Pipeline...")
 
     # 1. Collect undefined steps directly from the test suite
     feature_steps_map, all_raw_steps = collect_raw_steps(feature_files)
@@ -242,7 +241,7 @@ def main():
         feedback_dir="features")
 
     if not latest_patterns:
-        print("⏩ Phase 4 Skipped: No active step patterns found in feedback directory.")
+        print("⏩ Phase 3 Skipped: No active step patterns found in feedback directory.")
     else:
         # 2. Extract existing step definitions from features/steps
         existing_step_files = list(Path("features/steps").glob("*.py")) if Path("features/steps").exists() else []
@@ -257,10 +256,9 @@ def main():
         del impl_coach
         gc.collect()
 
-        print(f"📋 [Phase 4 Coach Decision]: generator_required={coach_response.should_run_generator}")
-
         # 4. Handle GENERATE Execution Path
         if coach_response.should_run_generator:
+            print(f"    🤖 [Audit Coach]: Evaluating audit execution scope...")
             # Filter patterns flagged strictly for GENERATE
             unhandled_patterns = [
                 target.step_pattern
@@ -271,7 +269,7 @@ def main():
 
             if unhandled_patterns:
                 print(
-                    f"⚙️ [Phase 4.1]: Generating step skeletons for {len(unhandled_patterns)} unhandled pattern(s)...")
+                    f"    🔍 Phase 3.1: Generating step skeletons for {len(unhandled_patterns)} unhandled pattern(s)...")
                 skeleton_agent = StepSkeletonGeneratorAgent()
                 skeletons = skeleton_agent.generate_skeletons(unhandled_pattern_set, unhandled_patterns)
                 del skeleton_agent
@@ -280,13 +278,13 @@ def main():
                 if skeletons:
                     combined_skeletons = "\n\n".join(skeletons)
 
-                    print("⚙️️ [Phase 4.2]: Generating Python @step implementation code...")
+                    print("    🔍 Phase 3.2: Generating Python @step implementation code...")
                     step_generator_agent = StepGeneratorAgent()
                     draft_code = step_generator_agent.generate_missing_steps(combined_skeletons)
                     del step_generator_agent
                     gc.collect()
 
-                    print("🧹 [Phase 4.3]: Reviewing, sanitizing, and validating AST with Ruff...")
+                    print("    🧹 Phase 3.3: Reviewing, sanitizing, and validating AST with Ruff...")
                     step_reviewer_agent = StepReviewAgent()
                     cleaned_final_code = step_reviewer_agent.review_and_fix(draft_code)
                     del step_reviewer_agent
@@ -298,12 +296,12 @@ def main():
                     with open(output_file, "a" if output_file.exists() else "w", encoding="utf-8") as out_f:
                         out_f.write("\n\n" + cleaned_final_code + "\n")
 
-                    print(f"✨ [Phase 4 Complete]: Generated step definitions appended to {output_file.resolve()}")
+                    print(f"    ✅ Generated step definitions appended to {output_file.resolve()}")
             else:
-                print("⏩ [Phase 4 Coach]: Generator was flagged, but no specific patterns required GENERATE.")
+                print("⏩ [Audit Coach]: Generator was flagged, but no specific patterns required GENERATE.")
         else:
             print(
-                "⏩ [Phase 4 Coach]: All step definitions are already implemented or skipped. No code generation "
+                "⏩ [Audit Coach]: All step definitions are already implemented or skipped. No code generation "
                 "required.")
 
 
