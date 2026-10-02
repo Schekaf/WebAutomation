@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from enum import Enum
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -129,3 +129,29 @@ class AuditCoachTargetScope(BaseModel):
 class AuditCoachResponse(BaseModel):
     target_scope: List[AuditCoachTargetScope]
     should_run_audit: bool
+
+
+class StepImplementationTargetScope(BaseModel):
+    step_pattern: str = Field(
+        description="The Gherkin step pattern requiring implementation, e.g., 'I click on {element}'"
+    )
+    action: Literal["GENERATE", "SKIP"] = Field(
+        description="Directive action for step definition code generation"
+    )
+    target_python_file: Optional[str] = Field(
+        default="features/steps/generated_by_ai_steps.py",
+        description="Target Python file where the step definition code should be written or updated"
+    )
+    reason: str = Field(
+        description="Detailed explanation for the directive based on undefined steps or existing step definitions"
+    )
+
+
+class StepImplementationCoachResponse(BaseModel):
+    should_run_generator: bool = Field(
+        description="True if at least one undefined step pattern requires GENERATE_NEW"
+    )
+    target_scope: List[StepImplementationTargetScope] = Field(
+        default_factory=list,
+        description="List of undefined step targets and their implementation directives"
+    )
