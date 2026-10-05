@@ -23,9 +23,6 @@ from ai_agents.core.schemas import TestGenerationCoachResponse
 
 TEST_GENERATION_COACH_PROMPT = """You are the Test Generation Coach Agent responsible for gatekeeping the BDD feature generation phase.
 
-LESSONS LEARNED (PAST FAILURE MODES):
-{lessons_learned}
-
 BUSINESS REQUIREMENTS DOCUMENT:
 {requirements_doc}
 
